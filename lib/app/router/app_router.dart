@@ -3,11 +3,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
+import '../../features/device/presentation/pages/device_status_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/welcome_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/premium/presentation/pages/payment_review_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
-import '../../features/resources/pages/course_resources_page.dart';
+import '../../features/resources/domain/entities/resource_category_type.dart';
+import '../../features/resources/presentation/pages/browse_courses_page.dart';
+import '../../features/resources/presentation/pages/category_resources_page.dart';
+import '../../features/resources/presentation/pages/course_categories_page.dart';
+import '../../features/resources/presentation/pages/home_page.dart';
+import '../../features/resources/presentation/pages/resource_detail_page.dart';
 import '../../features/selection/presentation/pages/selection_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../shell/main_shell.dart';
@@ -73,7 +80,7 @@ GoRouter createRouter({
       ),
 
       // ============================================================
-      // SELECTION  (before entering the shell)
+      // SELECTION (before entering the shell)
       // ============================================================
 
       GoRoute(
@@ -85,7 +92,7 @@ GoRouter createRouter({
       ),
 
       // ============================================================
-      // PREMIUM / PAYMENT  (full-screen, outside the shell)
+      // PREMIUM / PAYMENT (full-screen)
       // ============================================================
 
       GoRoute(
@@ -104,26 +111,76 @@ GoRouter createRouter({
         ),
       ),
 
-      // ============================================================
-      // COURSE RESOURCES  (full-screen, outside the shell)
-      // ============================================================
-
       GoRoute(
         path: RouteNames.courseResources,
         name: RouteNames.courseResources,
         pageBuilder: (context, state) => const MaterialPage(
-          child: CourseResourcesPage(),
+          child: CourseCategoriesPage(courseId: 1),
         ),
       ),
 
       // ============================================================
-      // MAIN SHELL  — persistent bottom nav
+      // COURSE BROWSING & RESOURCE DETAIL FLOW
+      // ============================================================
+
+      GoRoute(
+        path: RouteNames.courseDetail,
+        name: RouteNames.courseDetail,
+        pageBuilder: (context, state) {
+          final courseId = (state.extra is int) ? state.extra as int : 1;
+          return MaterialPage(
+            child: CourseCategoriesPage(courseId: courseId),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.courseCategoryResources,
+        name: RouteNames.courseCategoryResources,
+        pageBuilder: (context, state) {
+          int courseId = 1;
+          ResourceCategoryType category = ResourceCategoryType.handouts;
+          if (state.extra is Map) {
+            final map = state.extra as Map;
+            courseId = map['courseId'] as int? ?? 1;
+            category = map['category'] as ResourceCategoryType? ?? ResourceCategoryType.handouts;
+          }
+          return MaterialPage(
+            child: CategoryResourcesPage(
+              courseId: courseId,
+              category: category,
+            ),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.resourceDetail,
+        name: RouteNames.resourceDetail,
+        pageBuilder: (context, state) {
+          final resId = (state.extra is int) ? state.extra as int : 101;
+          return MaterialPage(
+            child: ResourceDetailPage(resourceId: resId),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.profile,
+        name: RouteNames.profile,
+        pageBuilder: (context, state) => const MaterialPage(
+          child: ProfilePage(),
+        ),
+      ),
+
+      // ============================================================
+      // MAIN SHELL — persistent 4 bottom nav tabs
       //
-      // Branch order must match MainShell._tabs order:
-      //   0 → Explore  (/home)
-      //   1 → Map      (/map)
-      //   2 → Coupons  (/coupons)
-      //   3 → Profile  (/profile)
+      // Branch order:
+      //   0 → Home          (/home)
+      //   1 → Browse        (/browse)
+      //   2 → Status        (/status)
+      //   3 → Notifications (/notifications)
       // ============================================================
 
       StatefulShellRoute.indexedStack(
@@ -132,53 +189,53 @@ GoRouter createRouter({
         ),
         branches: [
 
-          // ── Branch 0: Explore / Home ────────────────────────────
+          // ── Branch 0: Home ──────────────────────────────────────
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: RouteNames.home,
                 name: RouteNames.home,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: _HomePlaceholder(),
+                  child: HomePage(),
                 ),
               ),
             ],
           ),
 
-          // ── Branch 1: Map ───────────────────────────────────────
+          // ── Branch 1: Browse (Freshman Courses) ─────────────────
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RouteNames.map,
-                name: RouteNames.map,
+                path: RouteNames.browse,
+                name: RouteNames.browse,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: _PlaceholderTab(label: 'Map'),
+                  child: BrowseCoursesPage(),
                 ),
               ),
             ],
           ),
 
-          // ── Branch 2: Coupons ───────────────────────────────────
+          // ── Branch 2: Status ────────────────────────────────────
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RouteNames.coupons,
-                name: RouteNames.coupons,
+                path: RouteNames.status,
+                name: RouteNames.status,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: _PlaceholderTab(label: 'Coupons'),
+                  child: DeviceStatusPage(),
                 ),
               ),
             ],
           ),
 
-          // ── Branch 3: Profile ───────────────────────────────────
+          // ── Branch 3: Notifications ─────────────────────────────
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RouteNames.profile,
-                name: RouteNames.profile,
+                path: RouteNames.notifications,
+                name: RouteNames.notifications,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: ProfilePage(),
+                  child: NotificationsPage(),
                 ),
               ),
             ],
@@ -195,43 +252,6 @@ GoRouter createRouter({
       child: _RouterErrorPage(error: state.error),
     ),
   );
-}
-
-// ── Placeholders ──────────────────────────────────────────────────
-
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFFDF6EE),
-      body: Center(
-        child: Text(
-          'Home — Developer B',
-          style: TextStyle(fontSize: 18, color: Color(0xFF1A1A1A)),
-        ),
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String label;
-  const _PlaceholderTab({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFDF6EE),
-      body: Center(
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 18, color: Color(0xFF1A1A1A)),
-        ),
-      ),
-    );
-  }
 }
 
 // ── Router error page ─────────────────────────────────────────────

@@ -247,8 +247,8 @@ class _SelectionPageState extends State<SelectionPage> {
     debugPrint('Selected year: $selectedYear');
     debugPrint('Selected field: $selectedField');
 
-    // Navigate to Course Resources
-    context.go(RouteNames.courseResources);
+    // Navigate to Home / Resource Hub
+    context.go(RouteNames.home);
   }
 }
 

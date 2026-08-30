@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/branding_widgets.dart';
 import '../widgets/payment_widgets.dart';
 
@@ -11,9 +13,8 @@ class PaymentReviewPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: AppBackground(
-showTopRightOutline: false,
+        showTopRightOutline: false,
         showBottomRightDots: false,
-              
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
@@ -40,7 +41,7 @@ showTopRightOutline: false,
 
                 PaymentStatusCard(
                   onCheckStatus: () {
-                    // Check payment status here.
+                    context.go(RouteNames.home);
                   },
                 ),
               ],

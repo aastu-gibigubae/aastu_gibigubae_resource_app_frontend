@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../theme/app_colors.dart';
 
 /// ================================================================
 /// MAIN SHELL
@@ -8,11 +9,6 @@ import 'package:go_router/go_router.dart';
 /// [StatefulNavigationShell] from go_router keeps each branch's
 /// page stack alive when you switch tabs.
 /// ================================================================
-
-const _kBg = Color(0xFFFDF6EE);
-const _kActive = Color(0xFF1A1A1A);
-const _kInactive = Color(0xFF888888);
-const _kDivider = Color(0xFFEEEEEE);
 
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -24,17 +20,15 @@ class MainShell extends StatelessWidget {
 
   // ── Tab routes (must match branch order in router) ─────────────
   static const _tabs = [
-    _TabItem(icon: Icons.explore_outlined,              label: 'Explore'),
-    _TabItem(icon: Icons.map_outlined,                  label: 'Map'),
-    _TabItem(icon: Icons.confirmation_number_outlined,  label: 'Coupons'),
-    _TabItem(icon: Icons.person_rounded,                label: 'Profile'),
+    _TabItem(icon: Icons.home_rounded, unselectedIcon: Icons.home_outlined, label: 'Home'),
+    _TabItem(icon: Icons.search_rounded, unselectedIcon: Icons.search, label: 'Browse'),
+    _TabItem(icon: Icons.check_circle_rounded, unselectedIcon: Icons.check_circle_outline, label: 'Status'),
+    _TabItem(icon: Icons.notifications_rounded, unselectedIcon: Icons.notifications_none_rounded, label: 'Notifications'),
   ];
 
   void _onTap(int index) {
     navigationShell.goBranch(
       index,
-      // Return to the branch's initial location when re-tapping
-      // the active tab (mirrors standard app behaviour).
       initialLocation: index == navigationShell.currentIndex,
     );
   }
@@ -42,7 +36,7 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.white,
       body: navigationShell,
       bottomNavigationBar: _BottomBar(
         currentIndex: navigationShell.currentIndex,
@@ -68,12 +62,19 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: _kDivider, width: 1)),
+        border: Border(
+          top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+        ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: bottomInset > 0 ? bottomInset : 10,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(tabs.length, (i) {
@@ -83,33 +84,32 @@ class _BottomBar extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: () => onTap(i),
             child: SizedBox(
-              width: 64,
+              width: 72,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    tab.icon,
+                    active ? tab.icon : tab.unselectedIcon,
                     size: 26,
-                    color: active ? _kActive : _kInactive,
+                    color: active ? AppColors.primary : const Color(0xFF888888),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     tab.label,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight:
-                          active ? FontWeight.w600 : FontWeight.w400,
-                      color: active ? _kActive : _kInactive,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                      color: active ? AppColors.primary : const Color(0xFF888888),
                     ),
                   ),
                   const SizedBox(height: 3),
                   // Active dot
                   Container(
-                    width: 5,
-                    height: 5,
+                    width: 4,
+                    height: 4,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: active ? _kActive : Colors.transparent,
+                      color: active ? AppColors.primary : Colors.transparent,
                     ),
                   ),
                 ],
@@ -124,6 +124,11 @@ class _BottomBar extends StatelessWidget {
 
 class _TabItem {
   final IconData icon;
+  final IconData unselectedIcon;
   final String label;
-  const _TabItem({required this.icon, required this.label});
+  const _TabItem({
+    required this.icon,
+    required this.unselectedIcon,
+    required this.label,
+  });
 }
