@@ -60,6 +60,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         context.go(RouteNames.onboarding);
       case SplashDestination.login:
         context.go(RouteNames.login);
+      case SplashDestination.home:
+        context.go(RouteNames.home);
       case SplashDestination.selection:
         context.go(RouteNames.selection);
     }

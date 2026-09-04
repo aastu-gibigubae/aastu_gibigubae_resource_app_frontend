@@ -78,10 +78,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Title ─────────────────────────────────────────────
             const _TitleBar(),
-
-            // ── Content ───────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -96,25 +93,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           setState(() => _businessMode = v),
                     ),
                     const SizedBox(height: 20),
-                    const _MenuCard(
+                    _MenuCard(
                       items: [
-                        _MenuItem(
+                        const _MenuItem(
                           icon: Icons.favorite_border_rounded,
                           label: 'Favorite',
                         ),
-                        _MenuItem(
+                        const _MenuItem(
                           icon: Icons.notifications_none_rounded,
                           label: 'Notifications',
                         ),
-                        _MenuItem(
+                        const _MenuItem(
                           icon: Icons.info_outline_rounded,
                           label: 'About',
                         ),
-                        _MenuItem(
+                        const _MenuItem(
                           icon: Icons.rate_review_outlined,
                           label: 'Reviews',
                         ),
-                        _MenuItem(
+                        const _MenuItem(
                           icon: Icons.help_outline_rounded,
                           label: 'Help',
                         ),
@@ -167,15 +164,13 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: _kCardBg,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          // ── Avatar with edit badge ───────────────────────────────
           Stack(
             children: [
               CircleAvatar(
@@ -209,10 +204,7 @@ class _UserCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(width: 16),
-
-          // ── Name / role ─────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,9 +227,7 @@ class _UserCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 GestureDetector(
-                  onTap: () {
-                    // TODO: navigate to edit profile
-                  },
+                  onTap: () {},
                   child: const Text(
                     'Edit Profile',
                     style: TextStyle(
@@ -270,8 +260,7 @@ class _BusinessModeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: _kCardBg,
         borderRadius: BorderRadius.circular(16),
@@ -373,8 +362,8 @@ class _MenuTile extends StatelessWidget {
       onTap: () {},
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
@@ -411,7 +400,11 @@ class _MenuTile extends StatelessWidget {
 class _MenuItem {
   final IconData icon;
   final String label;
-  const _MenuItem({required this.icon, required this.label});
+
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+  });
 }
 
 // ── Logout card ───────────────────────────────────────────────────
@@ -426,8 +419,8 @@ class _LogoutCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 20, vertical: 18),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
           color: _kCardBg,
           borderRadius: BorderRadius.circular(16),
