@@ -58,7 +58,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           name: name,
           email: email,
           password: password,
-          phone: phone.isEmpty ? null : phone,
+          phone: phone,
         );
 
     if (!mounted) return;
@@ -69,7 +69,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         _errorMessage = error;
       });
     } else {
-      context.go(RouteNames.home);
+      context.go(RouteNames.selection);
     }
   }
 
@@ -191,7 +191,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 child: SizedBox(
                   width: 376,
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Connecting to server…',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        )
                       : AuthButton(
                           text: 'Sign Up',
                           onPressed: _signUp,

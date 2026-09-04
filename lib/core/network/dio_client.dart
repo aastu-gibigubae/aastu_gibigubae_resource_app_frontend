@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../constants/api_constants.dart';
 import '../constants/app_constants.dart';
@@ -44,14 +45,20 @@ class DioClient {
 
     // ── Add interceptors (order matters) ──────────────────────────
     dio.interceptors.addAll([
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        requestHeader: false,
+        responseHeader: false,
+        error: true,
+        logPrint: (obj) => debugPrint('[DIO] $obj'),
+      ),
       ErrorInterceptor(),
       AuthInterceptor(
         secureStorage: secureStorage,
         refreshDio: refreshDio,
         onSessionExpired: onSessionExpired,
       ),
-      // Uncomment for verbose request/response logging during dev:
-      // LogInterceptor(requestBody: true, responseBody: true),
     ]);
 
     return dio;

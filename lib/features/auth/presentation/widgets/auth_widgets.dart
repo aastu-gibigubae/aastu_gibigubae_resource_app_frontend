@@ -319,12 +319,15 @@ class AuthRememberMe extends StatelessWidget {
 
       children: [
 
-        const Text(
-          'Remember me',
-          style: TextStyle(
-            color: AuthColors.primary,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: const Text(
+            'Remember me',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AuthColors.primary,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
 

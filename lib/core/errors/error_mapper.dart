@@ -18,6 +18,12 @@ class ErrorMapper {
   // ── DioException → Failure ────────────────────────────────────
 
   static Failure fromDioException(DioException e) {
+    // ErrorInterceptor already converted the error into a typed
+    // AppException and stored it in e.error — unwrap it first.
+    if (e.error is AppException) {
+      return fromAppException(e.error as AppException);
+    }
+
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
@@ -53,6 +59,12 @@ class ErrorMapper {
     if (data is Map<String, dynamic>) {
       reasonCode = data['reason_code'] as String?;
       serverMessage = data['message'] as String?;
+
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        reasonCode = (error['code'] as String?) ?? reasonCode;
+        serverMessage = (error['message'] as String?) ?? serverMessage;
+      }
     }
 
     // Map known backend reason codes first
@@ -101,6 +113,7 @@ class ErrorMapper {
             message ??
                 'Re-verification required. Please connect to the internet.');
       case 'invalid_credentials':
+      case 'INVALID_CREDENTIALS':
         return const InvalidCredentialsFailure();
       case 'session_expired':
         return const SessionExpiredFailure();
@@ -114,7 +127,13 @@ class ErrorMapper {
   static Failure fromAppException(AppException e) {
     if (e is NetworkException) return NetworkFailure(e.message);
     if (e is TimeoutException) return TimeoutFailure(e.message);
-    if (e is ServerException) return ServerFailure(e.message);
+    if (e is ServerException) {
+      // 400 errors are validation failures — show the backend message directly.
+      if (e.statusCode == 400 || e.statusCode == 422) {
+        return ValidationFailure(e.message);
+      }
+      return ServerFailure(e.message);
+    }
     if (e is UnauthorisedException) return SessionExpiredFailure(e.message);
     if (e is InvalidCredentialsException) {
       return InvalidCredentialsFailure(e.message);

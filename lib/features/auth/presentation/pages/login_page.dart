@@ -60,7 +60,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _errorMessage = error;
       });
     } else {
-      context.go(RouteNames.selection);
+      // Premium users go straight to home, free users go to selection.
+      final user = ref.read(authProvider).valueOrNull;
+      final isPremium = user?.isPremium ?? false;
+      if (mounted) {
+        context.go(isPremium ? RouteNames.home : RouteNames.selection);
+      }
     }
   }
 

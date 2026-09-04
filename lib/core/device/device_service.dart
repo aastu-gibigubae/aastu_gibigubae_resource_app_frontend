@@ -1,12 +1,13 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// ================================================================
 /// DEVICE SERVICE
 ///
 /// Reads platform-specific device metadata.
-/// Used by DeviceFingerprintService and the heartbeat call.
+/// Safe on all platforms including Web and Desktop.
 /// ================================================================
 
 class DeviceService {
@@ -14,24 +15,56 @@ class DeviceService {
 
   const DeviceService(this._deviceInfo);
 
-  factory DeviceService.create() =>
-      DeviceService(DeviceInfoPlugin());
-
-  // ── Platform-agnostic info ─────────────────────────────────────
+  factory DeviceService.create() => DeviceService(DeviceInfoPlugin());
 
   Future<DeviceDetails> getDeviceDetails() async {
+    // Web — dart:io Platform is not available at all
+    if (kIsWeb) {
+      final info = await _deviceInfo.webBrowserInfo;
+      return DeviceDetails(
+        model: info.browserName.name,
+        osVersion: info.platform ?? 'Web',
+        platform: 'Web',
+        deviceId: info.userAgent,
+      );
+    }
+
+    // Mobile / Desktop — dart:io is safe here
     if (Platform.isAndroid) {
       return _fromAndroid(await _deviceInfo.androidInfo);
     } else if (Platform.isIOS) {
       return _fromIos(await _deviceInfo.iosInfo);
-    } else {
-      // Web / Desktop fallback
-      return const DeviceDetails(
-        model: 'Unknown',
-        osVersion: 'Unknown',
-        platform: 'Other',
+    } else if (Platform.isWindows) {
+      final info = await _deviceInfo.windowsInfo;
+      return DeviceDetails(
+        model: info.productName,
+        osVersion: 'Windows ${info.displayVersion}',
+        platform: 'Windows',
+        deviceId: info.deviceId,
+      );
+    } else if (Platform.isMacOS) {
+      final info = await _deviceInfo.macOsInfo;
+      return DeviceDetails(
+        model: info.model,
+        osVersion: 'macOS ${info.osRelease}',
+        platform: 'macOS',
+        deviceId: info.systemGUID,
+      );
+    } else if (Platform.isLinux) {
+      final info = await _deviceInfo.linuxInfo;
+      return DeviceDetails(
+        model: info.name,
+        osVersion: info.version ?? 'Linux',
+        platform: 'Linux',
+        deviceId: info.machineId,
       );
     }
+
+    return const DeviceDetails(
+      model: 'Unknown',
+      osVersion: 'Unknown',
+      platform: 'Other',
+    );
   }
 
   // ── Android ────────────────────────────────────────────────────

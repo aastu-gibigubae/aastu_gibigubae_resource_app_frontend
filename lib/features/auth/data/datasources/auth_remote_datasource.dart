@@ -1,8 +1,6 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
-import '../../../../core/errors/app_exception.dart';
-import '../../../../core/errors/error_mapper.dart';
 import '../models/auth_response_model.dart';
 import '../models/token_model.dart';
 
@@ -10,7 +8,8 @@ import '../models/token_model.dart';
 /// AUTH REMOTE DATASOURCE
 ///
 /// Makes HTTP calls to the backend auth endpoints.
-/// Throws [AppException] subclasses on error.
+/// Errors are handled upstream by ErrorInterceptor — no try/catch
+/// needed here. DioExceptions bubble up as typed AppExceptions.
 /// ================================================================
 
 abstract class AuthRemoteDataSource {
@@ -46,20 +45,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     required String deviceFingerprint,
   }) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.login,
-        data: {
-          'email': email,
-          'password': password,
-          'device_fingerprint': deviceFingerprint,
-        },
-      );
-      return AuthResponseModel.fromJson(
-          response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw ErrorMapper.fromDioException(e);
-    }
+    final response = await _dio.post(
+      ApiConstants.login,
+      data: {
+        'email': email,
+        'password': password,
+        'device_fingerprint': deviceFingerprint,
+      },
+    );
+    return AuthResponseModel.fromJson(
+        response.data as Map<String, dynamic>);
   }
 
   // ── Signup ─────────────────────────────────────────────────────
@@ -72,22 +67,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? phone,
     required String deviceFingerprint,
   }) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.signup,
-        data: {
-          'name': name,
-          'email': email,
-          'password': password,
-          if (phone != null) 'phone': phone,
-          'device_fingerprint': deviceFingerprint,
-        },
-      );
-      return AuthResponseModel.fromJson(
-          response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw ErrorMapper.fromDioException(e);
-    }
+    final response = await _dio.post(
+      ApiConstants.signup,
+      data: {
+        'name': name,
+        'email': email,
+        'password': password,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        'device_fingerprint': deviceFingerprint,
+      },
+    );
+    return AuthResponseModel.fromJson(
+        response.data as Map<String, dynamic>);
   }
 
   // ── Logout ─────────────────────────────────────────────────────
@@ -97,11 +88,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await _dio.post(ApiConstants.logout);
     } on DioException catch (e) {
-      // If the server returns an error on logout we still clear local state,
-      // so only rethrow on network errors.
-      if (e.type == DioExceptionType.connectionError) {
-        throw ErrorMapper.fromDioException(e);
-      }
+      // Swallow server errors on logout — we still clear local state.
+      // Only rethrow on genuine connection failure.
+      if (e.type == DioExceptionType.connectionError) rethrow;
     }
   }
 
@@ -109,14 +98,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<TokenModel> refreshToken(String refreshToken) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.refreshToken,
-        data: {'refresh_token': refreshToken},
-      );
-      return TokenModel.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw ErrorMapper.fromDioException(e);
-    }
+    final response = await _dio.post(
+      ApiConstants.refreshToken,
+      data: {'refresh_token': refreshToken},
+    );
+    return TokenModel.fromJson(response.data as Map<String, dynamic>);
   }
 }

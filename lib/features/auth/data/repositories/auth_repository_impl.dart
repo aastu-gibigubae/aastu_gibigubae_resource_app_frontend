@@ -37,8 +37,12 @@ class AuthRepositoryImpl implements AuthRepository {
       deviceFingerprint: deviceFingerprint,
     );
 
-    await _persistSession(response.user, response.tokens.accessToken,
-        response.tokens.refreshToken);
+    // Persist tokens + cached user so the session survives app restarts.
+    await _persistSession(
+      response.user,
+      response.tokens.accessToken,
+      response.tokens.refreshToken,
+    );
 
     return (
       user: response.user.toEntity(),
@@ -125,8 +129,9 @@ class AuthRepositoryImpl implements AuthRepository {
       _secureStorage.write(StorageKeys.accessToken, accessToken),
       _secureStorage.write(StorageKeys.refreshToken, refreshToken),
       _secureStorage.write(StorageKeys.userId, user.id),
-      _secureStorage.write(
-          'cached_user', jsonEncode(user.toJson())),
+      _secureStorage.write(StorageKeys.subscriptionStatus,
+          user.subscriptionStatus),
+      _secureStorage.write('cached_user', jsonEncode(user.toJson())),
     ]);
   }
 }

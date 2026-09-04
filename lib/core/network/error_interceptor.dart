@@ -44,6 +44,12 @@ class ErrorInterceptor extends Interceptor {
         if (data is Map<String, dynamic>) {
           message = (data['message'] as String?) ?? message;
           reasonCode = data['reason_code'] as String?;
+
+          final error = data['error'];
+          if (error is Map<String, dynamic>) {
+            message = (error['message'] as String?) ?? message;
+            reasonCode = (error['code'] as String?) ?? reasonCode;
+          }
         }
 
         final AppException appEx = _fromStatus(statusCode, message, reasonCode);
@@ -62,6 +68,12 @@ class ErrorInterceptor extends Interceptor {
   }
 
   AppException _fromStatus(int code, String message, String? reasonCode) {
+    final normalizedCode = reasonCode?.toLowerCase();
+
+    if (normalizedCode == 'invalid_credentials') {
+      return InvalidCredentialsException(message: message);
+    }
+
     if (reasonCode == 'premium_required') {
       return PremiumRequiredException(message: message);
     }

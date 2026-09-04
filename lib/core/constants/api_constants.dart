@@ -10,7 +10,7 @@ class ApiConstants {
   ApiConstants._();
 
   // ── Base URL ─────────────────────────────────────────────────────
-  static const String baseUrl = 'https://api.aastufreshman.com/api/v1';
+  static const String baseUrl = 'https://resource-app-h7e9.onrender.com';
 
   // ── Auth ─────────────────────────────────────────────────────────
   static const String login = '/auth/login';
@@ -18,21 +18,21 @@ class ApiConstants {
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';
 
-  // ── Device ───────────────────────────────────────────────────────
-  static const String heartbeat = '/device/heartbeat';
-  static const String deviceStatus = '/device/status';
+  // ── Device / Verification ─────────────────────────────────────────
+  /// SRS Module 5 — FR-5.3 / FR-5.4
+  static const String heartbeat = '/verify/heartbeat';
 
   // ── Browse ────────────────────────────────────────────────────────
   static const String streams = '/streams';
   static const String departments = '/departments';
   static const String courses = '/courses';
-  static const String resources = '/resources';
+
+  /// GET /courses/:id/resources?category=&page=&limit=
+  static String courseResources(String courseId) =>
+      '/courses/$courseId/resources';
 
   // ── Search ────────────────────────────────────────────────────────
   static const String search = '/search';
-
-  // ── Downloads ─────────────────────────────────────────────────────
-  static const String downloadSignedUrl = '/resources/:id/download';
 
   // ── Reports ───────────────────────────────────────────────────────
   static const String reportResource = '/resources/:id/report';
@@ -41,10 +41,16 @@ class ApiConstants {
   static const String notifications = '/notifications';
   static const String markNotificationRead = '/notifications/:id/read';
 
+  // ── Admin ─────────────────────────────────────────────────────────
+  static const String adminUsers = '/admin/users';
+  static const String adminGrantPremium = '/admin/users/:id/grant-premium';
+  static const String adminRevokeDevice = '/admin/users/:id/revoke-device';
+  static const String adminReports = '/admin/reports';
+  static const String adminResolveReport = '/admin/reports/:id/resolve';
+
   // ── Helpers ───────────────────────────────────────────────────────
 
   /// Replace the `:id` placeholder with the actual value.
-  static String withId(String template, String id) {
-    return template.replaceFirst(':id', id);
-  }
+  static String withId(String template, String id) =>
+      template.replaceFirst(':id', id);
 }

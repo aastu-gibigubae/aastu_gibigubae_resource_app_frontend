@@ -8,12 +8,11 @@ import 'route_names.dart';
 /// ================================================================
 /// ROUTE GUARDS
 ///
-/// Redirect logic evaluated on every navigation event.
-///
-/// Rules:
-///   • Unauthenticated users are sent to /login.
-///   • Authenticated users cannot revisit /login or /signup.
-///   • Onboarding is shown once; after that it is skipped.
+/// Navigation rules:
+///   • Unauthenticated → protected route  : redirect to /login
+///   • Authenticated   → /login or /signup : redirect based on plan
+///   • Premium user    → /selection        : redirect to /home
+///   • Free user       → /login or /signup : redirect to /selection
 /// ================================================================
 
 class RouteGuards {
@@ -21,31 +20,45 @@ class RouteGuards {
 
   const RouteGuards(this._secureStorage);
 
-  // ── Main redirect callback ─────────────────────────────────────
-
   Future<String?> redirect(BuildContext context, GoRouterState state) async {
     final location = state.matchedLocation;
 
     final token = await _secureStorage.read(StorageKeys.accessToken);
     final isLoggedIn = token != null && token.isNotEmpty;
 
-    // Public routes that don't need a session check.
-    final isAuthRoute = location == RouteNames.login ||
-        location == RouteNames.signup ||
+    // Routes accessible regardless of auth state.
+    final isPublic = location == RouteNames.splash ||
         location == RouteNames.onboarding ||
-        location == RouteNames.splash;
+        location == RouteNames.login ||
+        location == RouteNames.signup ||
+        location == RouteNames.selection ||
+        location == RouteNames.courseResources;
 
-    // Redirect unauthenticated users away from protected routes.
-    if (!isLoggedIn && !isAuthRoute) {
+    // Unauthenticated users hit protected routes → send to login.
+    if (!isLoggedIn && !isPublic) {
       return RouteNames.login;
     }
 
-    // Redirect authenticated users away from login/signup.
-    if (isLoggedIn &&
-        (location == RouteNames.login || location == RouteNames.signup)) {
-      return RouteNames.selection;
+    if (isLoggedIn) {
+      final subscriptionStatus =
+          await _secureStorage.read(StorageKeys.subscriptionStatus) ?? 'none';
+      final isPremium = subscriptionStatus == 'active';
+
+      // Premium users trying to re-enter login/signup → home.
+      // Free users trying to re-enter login/signup → selection.
+      if (location == RouteNames.login || location == RouteNames.signup) {
+        return isPremium ? RouteNames.home : RouteNames.selection;
+      }
+
+      // Premium users visiting selection or course-resources →
+      // they already have access, send them to home.
+      if (isPremium &&
+          (location == RouteNames.selection ||
+              location == RouteNames.courseResources)) {
+        return RouteNames.home;
+      }
     }
 
-    return null; // No redirect needed.
+    return null;
   }
 }

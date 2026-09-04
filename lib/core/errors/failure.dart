@@ -22,7 +22,8 @@ class NetworkFailure extends Failure {
 }
 
 class TimeoutFailure extends Failure {
-  const TimeoutFailure([super.message = 'Request timed out.']);
+  const TimeoutFailure([super.message =
+      'The server is waking up. Please wait a moment and try again.']);
 }
 
 class ServerFailure extends Failure {
