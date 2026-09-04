@@ -4,60 +4,74 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/route_names.dart';
 import '../../../app/theme/app_colors.dart';
 
+// ================================================================
+// COURSE RESOURCES PAGE
+// ================================================================
+
 class CourseResourcesPage extends StatelessWidget {
-  const CourseResourcesPage({
-    super.key,
-  });
+  const CourseResourcesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      extendBodyBehindAppBar: true,
-
       body: SafeArea(
         bottom: false,
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // =====================================================
-            // NAVY BACKGROUND
-            // =====================================================
+            // ── Header ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 18, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // About Premium button
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: _AboutPremiumButton(
+                      onTap: () => context.go(RouteNames.premium),
+                    ),
+                  ),
 
-            const Positioned.fill(
-              child: ColoredBox(
-                color: AppColors.primary,
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    'Explore Course Resources',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Get access to past exams, lecture notes,\nmodules and more.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // =====================================================
-            // HEADER
-            // =====================================================
-
-            const Positioned(
-              left: 30,
-              right: 18,
-              top: 20,
-              child: _ResourceHeader(),
-            ),
-
-            // =====================================================
-            // WHITE CONTENT PANEL
-            // =====================================================
-
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 182,
-              bottom: 0,
+            // ── White panel ───────────────────────────────────────
+            Expanded(
               child: Container(
+                width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(48),
-                    topRight: Radius.circular(48),
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
                   ),
                 ),
-                child: const _ResourceContent(),
+                child: const _WhitePanel(),
               ),
             ),
           ],
@@ -67,145 +81,237 @@ class CourseResourcesPage extends StatelessWidget {
   }
 }
 
-// =================================================================
-// HEADER
-// =================================================================
+// ================================================================
+// ABOUT PREMIUM BUTTON
+// ================================================================
 
-class _ResourceHeader extends StatelessWidget {
-  const _ResourceHeader();
+class _AboutPremiumButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AboutPremiumButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // =========================================================
-        // PREMIUM BUTTON
-        // =========================================================
-
-        Align(
-          alignment: Alignment.topRight,
-
-          // =======================================================
-          // NAVIGATE TO PREMIUM
-          // =======================================================
-
-          child: GestureDetector(
-            onTap: () {
-              context.go(RouteNames.premium);
-            },
-
-            child: Container(
-              height: 25,
-
-              padding: const EdgeInsets.symmetric(
-                horizontal: 11,
-              ),
-
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: AppColors.secondary,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 16,
+              height: 16,
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 border: Border.all(
                   color: AppColors.secondary,
-                  width: 2,
+                  width: 1.5,
                 ),
-
-                borderRadius:
-                    BorderRadius.circular(22),
               ),
+              child: const Center(
+                child: Text(
+                  'i',
+                  style: TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 5),
+            const Text(
+              'About Premium',
+              style: TextStyle(
+                color: AppColors.secondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-              child: Row(
-                mainAxisSize:
-                    MainAxisSize.min,
+// ================================================================
+// WHITE PANEL
+// ================================================================
 
+class _WhitePanel extends StatelessWidget {
+  const _WhitePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Sneak peek section ────────────────────────────────
+          const Text(
+            "Here's a sneak peek of what you'll get",
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Category icons row ────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              _CategoryCard(
+                emoji: '📋',
+                label: 'Final Exams',
+              ),
+              _CategoryCard(
+                emoji: '📚',
+                label: 'Modules',
+              ),
+              _CategoryCard(
+                emoji: '📁',
+                label: 'Handouts',
+              ),
+              _CategoryCard(
+                emoji: '📊',
+                label: 'Midterms',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+          const SizedBox(height: 20),
+
+          // ── Sample resources ──────────────────────────────────
+          const Text(
+            'Sample Resources',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── Resource list ─────────────────────────────────────
+          const _ResourceRow(
+            type: _FileType.pdf,
+            title: 'Communicative English I',
+            subtitle: 'Midterm',
+            year: '2023 AC',
+          ),
+          const SizedBox(height: 10),
+          const _ResourceRow(
+            type: _FileType.pdf,
+            title: 'Mathematics',
+            subtitle: 'Final Exam',
+            year: '2024 AC',
+          ),
+          const SizedBox(height: 10),
+          const _ResourceRow(
+            type: _FileType.ppt,
+            title: 'Anthropology',
+            subtitle: 'Lecture Notes',
+          ),
+          const SizedBox(height: 10),
+          const _ResourceRow(
+            type: _FileType.docx,
+            title: 'History',
+            subtitle: 'Lecture Notes',
+          ),
+
+          const SizedBox(height: 28),
+
+          // ── Get Premium link ──────────────────────────────────
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () => context.go(RouteNames.premium),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // =================================================
-                  // INFO ICON
-                  // =================================================
-
-                  Container(
-                    width: 18,
-                    height: 18,
-
-                    decoration:
-                        BoxDecoration(
-                      shape: BoxShape.circle,
-
-                      border: Border.all(
-                        color:
-                            AppColors.secondary,
-                        width: 2,
-                      ),
-                    ),
-
-                    child: const Center(
-                      child: Text(
-                        'i',
-
-                        style: TextStyle(
-                          color:
-                              AppColors.secondary,
-                          fontSize: 10,
-                          fontWeight:
-                              FontWeight.w800,
-                        ),
-                      ),
+                  Text(
+                    'Get Premium',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.primary,
                     ),
                   ),
-
-                  const SizedBox(width: 5, height:3),
-
-                  // =================================================
-                  // ABOUT PREMIUM
-                  // =================================================
-
-                  const Text(
-                    'About Premium',
-
-                    style: TextStyle(
-                      color:
-                          AppColors.secondary,
-                      fontSize: 10,
-                      fontWeight:
-                          FontWeight.w700,
-                    ),
+                  SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward,
+                    color: AppColors.primary,
+                    size: 18,
                   ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
 
-        const SizedBox(height: 22),
+// ================================================================
+// CATEGORY CARD
+// ================================================================
 
-        // =========================================================
-        // TITLE
-        // =========================================================
+class _CategoryCard extends StatelessWidget {
+  final String emoji;
+  final String label;
 
-        const Text(
-          'Explore Course Resources',
+  const _CategoryCard({
+    required this.emoji,
+    required this.label,
+  });
 
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 23,
-            fontWeight: FontWeight.w800,
-            height: 1.05,
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 32),
+            ),
           ),
         ),
-
-        const SizedBox(height: 8),
-
-        // =========================================================
-        // DESCRIPTION
-        // =========================================================
-
-        const Text(
-          'Get access to past exams, lecture notes,\n'
-          'modules and more.',
-
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 15,
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 11,
             fontWeight: FontWeight.w500,
-            height: 1.55,
           ),
         ),
       ],
@@ -213,290 +319,217 @@ class _ResourceHeader extends StatelessWidget {
   }
 }
 
-// =================================================================
-// WHITE CONTENT
-// =================================================================
+// ================================================================
+// RESOURCE ROW
+// ================================================================
 
-class _ResourceContent extends StatelessWidget {
-  const _ResourceContent();
+enum _FileType { pdf, ppt, docx }
+
+class _ResourceRow extends StatelessWidget {
+  final _FileType type;
+  final String title;
+  final String subtitle;
+  final String? year;
+
+  const _ResourceRow({
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    this.year,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: 30,
-        right: 30,
-        top: 38,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FF),
+        borderRadius: BorderRadius.circular(14),
       ),
-
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-
+      child: Row(
         children: [
-          // =======================================================
-          // SECTION TITLE
-          // =======================================================
+          // ── File icon ─────────────────────────────────────────
+          _FileIcon(type: type),
 
-          const Text(
-            'Examples of resources you’ll get',
+          const SizedBox(width: 14),
 
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          // =======================================================
-          // RESOURCE CONTAINER
-          // =======================================================
-
+          // ── Title + subtitle ──────────────────────────────────
           Expanded(
-            child: Container(
-              width: double.infinity,
-
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 232, 238, 248),
-
-                borderRadius:
-                    BorderRadius.circular(40),
-
-                border: Border.all(
-                  color:
-                      const Color(0xFFF0EDED),
-                  width: 1.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-
-              child: const Stack(
-                children: [
-                  Positioned(
-                    left: 20,
-                    top: 28,
-                    child: _PdfResourceCard(),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Color(0xFF7B8EB8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                if (year != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    year!,
+                    style: const TextStyle(
+                      color: Color(0xFF9BA8C8),
+                      fontSize: 11,
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 50, width:30),
+          // ── Type badge ────────────────────────────────────────
+          _TypeBadge(type: type),
         ],
       ),
     );
   }
 }
 
-// =================================================================
-// PDF RESOURCE CARD
-// =================================================================
+// ================================================================
+// FILE ICON
+// ================================================================
 
-class _PdfResourceCard
-    extends StatelessWidget {
-  const _PdfResourceCard();
+class _FileIcon extends StatelessWidget {
+  final _FileType type;
+
+  const _FileIcon({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (type) {
+      case _FileType.pdf:
+        return _buildIcon(
+          bgColor: const Color(0xFFFFE5E5),
+          child: const _PdfLabel(label: 'PDF', color: Color(0xFFE53935)),
+        );
+      case _FileType.ppt:
+        return _buildIcon(
+          bgColor: const Color(0xFFFFE5E5),
+          child: const _PdfLabel(label: 'PPT', color: Color(0xFFE53935)),
+        );
+      case _FileType.docx:
+        return _buildIcon(
+          bgColor: const Color(0xFFE3F0FF),
+          child: const _DocxIcon(),
+        );
+    }
+  }
+
+  Widget _buildIcon({required Color bgColor, required Widget child}) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(child: child),
+    );
+  }
+}
+
+class _PdfLabel extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _PdfLabel({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 90,
-      height: 85,
-
+      width: 36,
+      height: 28,
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 204, 219, 252),
-
-        borderRadius:
-            BorderRadius.circular(19),
-
-        border: Border.all(
-          color: const Color(0xFFDADADA),
-          width: 1,
-        ),
+        color: color,
+        borderRadius: BorderRadius.circular(4),
       ),
-
-      child: Padding(
-        padding: const EdgeInsets.only(
-          top: 4,
-          left: 4,
-          right: 4,
-          bottom: 3,
-        ),
-
-        child: Column(
-          children: [
-            // =====================================================
-            // PDF ICON
-            // =====================================================
-
-            SizedBox(
-              width: 50,
-              height: 42,
-
-              child: CustomPaint(
-                painter: _PdfIconPainter(),
-
-                child: const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: 8,
-                    ),
-
-                    child: Text(
-                      'PDF',
-
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight:
-                            FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            // =====================================================
-            // RESOURCE NAME
-            // =====================================================
-
-            const FittedBox(
-              fit: BoxFit.scaleDown,
-
-              child: Text(
-                'Communicative English I',
-
-                maxLines: 1,
-
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 10,
-                  fontWeight:
-                      FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
   }
 }
 
-// =================================================================
-// PDF ICON PAINTER
-// =================================================================
+class _DocxIcon extends StatelessWidget {
+  const _DocxIcon();
 
-class _PdfIconPainter
-    extends CustomPainter {
   @override
-  void paint(
-    Canvas canvas,
-    Size size,
-  ) {
-    final path = Path();
-
-    final double width = size.width;
-    final double height = size.height;
-
-    // ===========================================================
-    // PDF BODY
-    // ===========================================================
-
-    path.moveTo(15, 0);
-
-    path.lineTo(
-      width - 25,
-      0,
-    );
-
-    path.lineTo(
-      width,
-      25,
-    );
-
-    path.lineTo(
-      width,
-      height,
-    );
-
-    path.lineTo(
-      15,
-      height,
-    );
-
-    path.quadraticBezierTo(
-      0,
-      height,
-      0,
-      height - 15,
-    );
-
-    path.lineTo(
-      0,
-      15,
-    );
-
-    path.quadraticBezierTo(
-      0,
-      0,
-      15,
-      0,
-    );
-
-    path.close();
-
-    final paint = Paint()
-      ..color = const Color(0xFFFF4651)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(
-      path,
-      paint,
-    );
-
-    // ===========================================================
-    // FOLDED CORNER
-    // ===========================================================
-
-    final foldPath = Path();
-
-    foldPath.moveTo(
-      width - 25,
-      0,
-    );
-
-    foldPath.lineTo(
-      width - 25,
-      25,
-    );
-
-    foldPath.lineTo(
-      width,
-      25,
-    );
-
-    foldPath.close();
-
-    final foldPaint = Paint()
-      ..color = const Color(0xFFE83E49)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(
-      foldPath,
-      foldPaint,
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 28,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1565C0),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'W',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
+}
+
+// ================================================================
+// TYPE BADGE
+// ================================================================
+
+class _TypeBadge extends StatelessWidget {
+  final _FileType type;
+
+  const _TypeBadge({required this.type});
 
   @override
-  bool shouldRepaint(
-    covariant CustomPainter oldDelegate,
-  ) {
-    return false;
+  Widget build(BuildContext context) {
+    final label = switch (type) {
+      _FileType.pdf => 'PDF',
+      _FileType.ppt => 'PPT',
+      _FileType.docx => 'Docx',
+    };
+
+    final color = switch (type) {
+      _FileType.pdf => const Color(0xFFE53935),
+      _FileType.ppt => const Color(0xFFE53935),
+      _FileType.docx => const Color(0xFF1565C0),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
