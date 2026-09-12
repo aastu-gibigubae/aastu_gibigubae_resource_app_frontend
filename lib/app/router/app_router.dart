@@ -10,6 +10,7 @@ import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/premium/presentation/pages/payment_review_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/resources/domain/entities/resource_category_type.dart';
+import '../../features/resources/domain/entities/resource_item.dart';
 import '../../features/resources/presentation/pages/browse_courses_page.dart';
 import '../../features/resources/presentation/pages/category_resources_page.dart';
 import '../../features/resources/presentation/pages/course_categories_page.dart';
@@ -158,7 +159,12 @@ GoRouter createRouter({
         path: RouteNames.resourceDetail,
         name: RouteNames.resourceDetail,
         pageBuilder: (context, state) {
-          final resId = (state.extra is int) ? state.extra as int : 101;
+          if (state.extra is ResourceItem) {
+            return MaterialPage(
+              child: ResourceDetailPage(resource: state.extra as ResourceItem),
+            );
+          }
+          final resId = (state.extra is int) ? state.extra as int : 0;
           return MaterialPage(
             child: ResourceDetailPage(resourceId: resId),
           );

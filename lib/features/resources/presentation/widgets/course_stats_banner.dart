@@ -31,15 +31,12 @@ class CourseStatsBanner extends StatelessWidget {
           // Resources count
           Expanded(
             child: _buildStatItem(
-              topWidget: Text(
-                '${course.resourceCount}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: ResourceUiConstants.textNavy,
-                ),
+              topWidget: const Icon(
+                Icons.menu_book_rounded,
+                color: ResourceUiConstants.textNavy,
+                size: 26,
               ),
-              label: ResourceUiConstants.resourcesCountLabel,
+              label: 'Course',
             ),
           ),
           _buildDivider(),

@@ -19,7 +19,7 @@ class ResourceItem {
 
   const ResourceItem({
     required this.id,
-    required this.courseId,
+    this.courseId = 0,
     required this.title,
     this.description,
     required this.category,
@@ -28,10 +28,10 @@ class ResourceItem {
     this.reasonCode,
     this.message,
     this.fileUrl,
-    this.fileSizeBytes = 2516582,
+    this.fileSizeBytes = 0,
     this.checksum,
     this.courseName = '',
-    this.semester = 'Semester 1',
+    this.semester = '',
     this.academicYear = 1,
   });
 

@@ -27,7 +27,7 @@ class ResourceUiConstants {
     (ResourceCategoryType.handouts, 'Handouts'),
     (ResourceCategoryType.ppts, 'PPTs'),
     (ResourceCategoryType.midterms, 'Midterms'),
-    (ResourceCategoryType.assignments, 'Assignments'),
+    (ResourceCategoryType.tests, 'Tests'),
     (ResourceCategoryType.finals, 'Finals'),
     (ResourceCategoryType.modules, 'Modules'),
   ];

@@ -20,8 +20,8 @@ class CategoryIconBadge extends StatelessWidget {
         return _buildPptsBadge(size);
       case ResourceCategoryType.midterms:
         return _buildMidtermsBadge(size);
-      case ResourceCategoryType.assignments:
-        return _buildAssignmentsBadge(size);
+      case ResourceCategoryType.tests:
+        return _buildTestsBadge(size);
       case ResourceCategoryType.finals:
         return _buildFinalsBadge(size);
       case ResourceCategoryType.modules:
@@ -147,7 +147,7 @@ class CategoryIconBadge extends StatelessWidget {
     );
   }
 
-  static Widget _buildAssignmentsBadge(double size) {
+  static Widget _buildTestsBadge(double size) {
     return _buildContainer(
       size: size,
       bgColor: const Color(0xFFFAF5FF),

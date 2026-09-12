@@ -6,7 +6,7 @@ import '../constants/resource_ui_constants.dart';
 class ResourceItemCard extends StatelessWidget {
   final ResourceItem resource;
   final VoidCallback onTap;
-  final VoidCallback onDownload;
+  final VoidCallback? onDownload;
 
   const ResourceItemCard({
     super.key,

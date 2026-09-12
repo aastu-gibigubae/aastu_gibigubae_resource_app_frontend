@@ -12,4 +12,11 @@ class StreamItem {
     this.subtitle = 'Explore Courses',
     this.icon = Icons.school_outlined,
   });
+
+  factory StreamItem.fromJson(Map<String, dynamic> json) {
+    return StreamItem(
+      id: json['id'] as int,
+      name: json['name'] as String,
+    );
+  }
 }

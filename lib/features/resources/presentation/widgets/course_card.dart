@@ -62,37 +62,10 @@ class CourseCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${course.resourceCount}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: ResourceUiConstants.textNavy,
-                      ),
-                    ),
-                    const Text(
-                      ResourceUiConstants.resourcesCountLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: ResourceUiConstants.textNavy,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.arrow_forward,
-                  size: 16,
-                  color: Color(0xFF9CA3AF),
-                ),
-              ],
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Color(0xFF9CA3AF),
             ),
           ],
         ),

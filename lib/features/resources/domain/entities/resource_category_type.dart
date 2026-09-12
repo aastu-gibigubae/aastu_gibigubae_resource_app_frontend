@@ -1,8 +1,9 @@
+// Backend resource categories: test, midterm, final, ppt, module, handout.
 enum ResourceCategoryType {
   handouts('Handouts', 'handout'),
   ppts('PPTs', 'ppt'),
   midterms('Midterms', 'midterm'),
-  assignments('Assignments', 'assignment'),
+  tests('Tests', 'test'),
   finals('Finals', 'final'),
   modules('Modules', 'module');
 
