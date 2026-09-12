@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_category_type.dart';
 import '../../domain/entities/resource_item.dart';
+import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/resource_item_card.dart';
 
-class CategoryResourcesPage extends StatefulWidget {
+class CategoryResourcesPage extends ConsumerStatefulWidget {
   final int courseId;
   final ResourceCategoryType category;
 
@@ -20,23 +21,15 @@ class CategoryResourcesPage extends StatefulWidget {
   });
 
   @override
-  State<CategoryResourcesPage> createState() => _CategoryResourcesPageState();
+  ConsumerState<CategoryResourcesPage> createState() =>
+      _CategoryResourcesPageState();
 }
 
-class _CategoryResourcesPageState extends State<CategoryResourcesPage> {
+class _CategoryResourcesPageState
+    extends ConsumerState<CategoryResourcesPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  final MockResourceDatasource _datasource = const MockResourceDatasource();
-  late List<ResourceItem> _resources;
-
-  @override
-  void initState() {
-    super.initState();
-    _resources = _datasource.getCategoryResources(
-      courseId: widget.courseId,
-      category: widget.category,
-    );
-  }
+  String _localFilter = '';
 
   @override
   void dispose() {
@@ -47,23 +40,25 @@ class _CategoryResourcesPageState extends State<CategoryResourcesPage> {
 
   void _onSearchChanged(String query) {
     setState(() {
-      final all = _datasource.getCategoryResources(
-        courseId: widget.courseId,
-        category: widget.category,
-      );
-      if (query.trim().isEmpty) {
-        _resources = all;
-      } else {
-        _resources = all
-            .where((r) => r.title.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
+      _localFilter = query.trim().toLowerCase();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final course = _datasource.getCourseById(widget.courseId);
+    final params = CourseResourcesParams(
+      courseId: widget.courseId,
+      category: widget.category,
+    );
+    final resourcesAsync = ref.watch(courseResourcesProvider(params));
+
+    // Get the course name from courses provider (best-effort).
+    final coursesAsync =
+        ref.watch(coursesProvider(const CoursesParams()));
+    final courseName = coursesAsync.whenData((result) {
+      final match = result.courses.where((c) => c.id == widget.courseId);
+      return match.isNotEmpty ? match.first.name : 'Course';
+    });
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -79,7 +74,7 @@ class _CategoryResourcesPageState extends State<CategoryResourcesPage> {
                 _searchFocusNode.unfocus();
                 context.pop();
               },
-              title: course.name,
+              title: courseName.valueOrNull ?? 'Course',
               subtitle: widget.category.label,
               subtitleColor: ResourceUiConstants.accentGold,
               bottomChild: SearchPillBar(
@@ -91,33 +86,92 @@ class _CategoryResourcesPageState extends State<CategoryResourcesPage> {
 
             // Resource List
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                itemCount: _resources.length,
-                itemBuilder: (context, index) {
-                  final resource = _resources[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ResourceItemCard(
-                      resource: resource,
-                      onTap: () {
-                        _searchFocusNode.unfocus();
-                        context.push(
-                          RouteNames.resourceDetail,
-                          extra: resource.id,
-                        );
-                      },
-                      onDownload: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Downloading ${resource.title}...'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
+              child: resourcesAsync.when(
+                data: (result) {
+                  List<ResourceItem> resources = result.resources;
+                  if (_localFilter.isNotEmpty) {
+                    resources = resources
+                        .where((r) => r.title
+                            .toLowerCase()
+                            .contains(_localFilter))
+                        .toList();
+                  }
+
+                  if (resources.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'No resources found for this category.',
+                          style: TextStyle(
+                              color: Colors.grey, fontSize: 15),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20),
+                    itemCount: resources.length,
+                    itemBuilder: (context, index) {
+                      final resource = resources[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ResourceItemCard(
+                          resource: resource,
+                          onTap: () {
+                            _searchFocusNode.unfocus();
+                            context.push(
+                              RouteNames.resourceDetail,
+                              extra: resource,
+                            );
+                          },
+                          onDownload: resource.locked
+                              ? null
+                              : () {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Downloading ${resource.title}...'),
+                                      duration:
+                                          const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                        ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 48, color: Colors.redAccent),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Could not load resources.\n$err',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => ref.invalidate(
+                              courseResourcesProvider(params)),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/popular_categories_grid.dart';
-import '../widgets/recent_activity_tile.dart';
 import '../widgets/stream_card.dart';
+import '../../providers/resource_providers.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streamsAsync = ref.watch(streamsProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -94,24 +96,39 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StreamCard(
-                          title: 'Engineering',
-                          icon: Icons.settings,
-                          onTap: () => context.push(RouteNames.browse),
-                        ),
+                  streamsAsync.when(
+                    data: (streams) => Row(
+                      children: streams.take(2).map((stream) {
+                        final icon = stream.name.toLowerCase().contains('eng')
+                            ? Icons.settings
+                            : Icons.science_outlined;
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: stream != streams.take(2).last ? 12 : 0,
+                            ),
+                            child: StreamCard(
+                              title: stream.name,
+                              icon: icon,
+                              onTap: () => context.push(RouteNames.browse),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: StreamCard(
-                          title: 'Applied Science',
-                          icon: Icons.science_outlined,
-                          onTap: () => context.push(RouteNames.browse),
-                        ),
+                    ),
+                    error: (err, _) => Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Could not load streams: $err',
+                        style: const TextStyle(color: Colors.redAccent),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -169,55 +186,6 @@ class HomePage extends StatelessWidget {
             ),
 
             AppSpacing.gapLg,
-
-            // Recent Activities
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ResourceUiConstants.horizontalPadding,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        ResourceUiConstants.recentActivities,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => context.push(RouteNames.browse),
-                        child: const Text(
-                          ResourceUiConstants.seeAll,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: ResourceUiConstants.textLink,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ...MockResourceDatasource.recentActivities.map(
-                    (act) => RecentActivityTile(
-                      activity: act,
-                      onTap: () {
-                        context.push(
-                          RouteNames.resourceDetail,
-                          extra: act.id,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
             const SizedBox(height: 28),
           ],
