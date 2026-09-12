@@ -23,7 +23,9 @@ User get _mockUser => User(
       id: kMockUserId,
       name: kMockUserName,
       email: kMockUserEmail,
-      subscriptionStatus: 'free',
+      role: 'student',
+      subscriptionStatus: 'none',
+      activationStatus: 'active',
       createdAt: DateTime(2026, 1, 1),
     );
 

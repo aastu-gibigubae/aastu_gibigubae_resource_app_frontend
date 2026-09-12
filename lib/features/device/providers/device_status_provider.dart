@@ -52,14 +52,20 @@ class DeviceStatusNotifier
       );
 
       final data = response.data as Map<String, dynamic>;
-      final statusStr = (data['status'] as String?) ?? 'unknown';
-      final message = (data['message'] as String?) ?? _defaultMessage(statusStr);
+      final subscriptionStatus = (data['subscription_status'] as String?) ??
+          (data['status'] as String?) ??
+          'none';
+      final locked = (data['locked'] as bool?) ?? false;
+      final reasonCode = data['reason_code'] as String?;
+      final message =
+          (data['message'] as String?) ?? _defaultMessage(subscriptionStatus);
       final verifiedAt = data['verified_at'] != null
           ? DateTime.tryParse(data['verified_at'] as String)
-          : null;
+          : DateTime.now();
 
-      // Persist last verification timestamp.
-      if (statusStr == 'active') {
+      // Persist status and verification timestamp.
+      await storage.write(StorageKeys.subscriptionStatus, subscriptionStatus);
+      if (!locked && subscriptionStatus == 'active') {
         await storage.write(
           StorageKeys.lastVerification,
           DateTime.now().toIso8601String(),
@@ -70,8 +76,27 @@ class DeviceStatusNotifier
         );
       }
 
+      DeviceStatusState deviceState;
+      if (locked) {
+        if (reasonCode == 'device_mismatch') {
+          deviceState = DeviceStatusState.mismatch;
+        } else if (subscriptionStatus == 'expired') {
+          deviceState = DeviceStatusState.overdue;
+        } else {
+          deviceState = DeviceStatusState.pending;
+        }
+      } else {
+        if (subscriptionStatus == 'active') {
+          deviceState = DeviceStatusState.active;
+        } else if (subscriptionStatus == 'expired') {
+          deviceState = DeviceStatusState.overdue;
+        } else {
+          deviceState = DeviceStatusState.pending;
+        }
+      }
+
       return DeviceStatusData(
-        status: _parseStatus(statusStr),
+        status: deviceState,
         message: message,
         lastVerified: verifiedAt,
       );
@@ -97,23 +122,6 @@ class DeviceStatusNotifier
   }
 
   // ── Helpers ────────────────────────────────────────────────────
-
-  DeviceStatusState _parseStatus(String s) {
-    switch (s) {
-      case 'active':
-        return DeviceStatusState.active;
-      case 'pending':
-        return DeviceStatusState.pending;
-      case 'revoked':
-        return DeviceStatusState.revoked;
-      case 'mismatch':
-        return DeviceStatusState.mismatch;
-      case 'overdue':
-        return DeviceStatusState.overdue;
-      default:
-        return DeviceStatusState.unknown;
-    }
-  }
 
   DeviceStatusState _failureToState(Failure f) {
     if (f is DeviceMismatchFailure) return DeviceStatusState.mismatch;

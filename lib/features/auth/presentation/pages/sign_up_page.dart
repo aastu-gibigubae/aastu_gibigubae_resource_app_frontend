@@ -43,9 +43,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final password = _passwordController.text;
     final phone = _phoneController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty || phone.isEmpty) {
       setState(() =>
-          _errorMessage = 'Please fill in all required fields.');
+          _errorMessage = 'Please fill in all required fields including phone.');
+      return;
+    }
+
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() => _errorMessage = 'Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setState(() =>
+          _errorMessage = 'Password must be at least 8 characters long.');
       return;
     }
 
@@ -170,7 +181,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Phone ─────────────────────────────────────────────
               AuthTextField(
                 controller: _phoneController,
-                hint: 'Phone Number:',
+                hint: 'Phone Number (e.g. +251912345678):',
                 icon: Icons.phone,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,

@@ -30,9 +30,7 @@ class RouteGuards {
     final isPublic = location == RouteNames.splash ||
         location == RouteNames.onboarding ||
         location == RouteNames.login ||
-        location == RouteNames.signup ||
-        location == RouteNames.selection ||
-        location == RouteNames.courseResources;
+        location == RouteNames.signup;
 
     // Unauthenticated users hit protected routes → send to login.
     if (!isLoggedIn && !isPublic) {
@@ -42,7 +40,8 @@ class RouteGuards {
     if (isLoggedIn) {
       final subscriptionStatus =
           await _secureStorage.read(StorageKeys.subscriptionStatus) ?? 'none';
-      final isPremium = subscriptionStatus == 'active';
+      final isPremium =
+          subscriptionStatus == 'active' || subscriptionStatus == 'premium';
 
       // Premium users trying to re-enter login/signup → home.
       // Free users trying to re-enter login/signup → selection.
@@ -50,11 +49,8 @@ class RouteGuards {
         return isPremium ? RouteNames.home : RouteNames.selection;
       }
 
-      // Premium users visiting selection or course-resources →
-      // they already have access, send them to home.
-      if (isPremium &&
-          (location == RouteNames.selection ||
-              location == RouteNames.courseResources)) {
+      // Premium users visiting selection → send them to home.
+      if (isPremium && location == RouteNames.selection) {
         return RouteNames.home;
       }
     }

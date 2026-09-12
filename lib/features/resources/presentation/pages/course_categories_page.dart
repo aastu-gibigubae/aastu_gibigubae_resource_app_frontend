@@ -26,11 +26,26 @@ class CourseCategoriesPage extends ConsumerWidget {
 
     return coursesAsync.when(
       data: (result) {
+        if (result.courses.isEmpty) {
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              title: const Text('Course Categories'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            body: const Center(
+              child: Text(
+                'No courses available.',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+            ),
+          );
+        }
+
         final course = result.courses.firstWhere(
           (c) => c.id == courseId,
-          orElse: () => result.courses.isNotEmpty
-              ? result.courses.first
-              : throw Exception('No courses available'),
+          orElse: () => result.courses.first,
         );
 
         return Scaffold(

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/category_icons.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../domain/entities/resource_item.dart';
+import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/resource_document_hero.dart';
 
-class ResourceDetailPage extends StatelessWidget {
+class ResourceDetailPage extends ConsumerWidget {
   final ResourceItem? resource;
   final int resourceId;
 
@@ -42,7 +44,7 @@ class ResourceDetailPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final res = resource;
     if (res == null) {
       return Scaffold(
@@ -98,7 +100,7 @@ class ResourceDetailPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: ResourceUiConstants.textNavy,
+                            color: Colors.grey,
                           ),
                         ),
                         if (!res.locked && res.fileSizeBytes > 0) ...[
@@ -119,10 +121,10 @@ class ResourceDetailPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
 
-            // Locked resource banner
-            if (res.locked)
+            // Locked Warning Banner (if resource is locked)
+            if (res.locked) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
@@ -130,71 +132,67 @@ class ResourceDetailPage extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(
-                        ResourceUiConstants.cardBorderRadius),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: const Color(0xFFFBBF24), width: 1),
+                      color: const Color(0xFFF59E0B).withAlpha(80),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.lock_rounded,
-                              color: Color(0xFFD97706), size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              res.message ??
-                                  'This resource requires premium access.',
+                      const Icon(
+                        Icons.lock_outline_rounded,
+                        color: Color(0xFFD97706),
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              res.reasonCode != null
+                                  ? _reasonLabel(res.reasonCode!)
+                                  : 'Access Restricted',
                               style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
                                 color: Color(0xFF92400E),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      if (res.reasonCode != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFDE68A),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _reasonLabel(res.reasonCode!),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF92400E),
+                            const SizedBox(height: 2),
+                            Text(
+                              res.message?.isNotEmpty == true
+                                  ? res.message!
+                                  : 'This resource requires an active subscription and verified device.',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFB45309),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+            ],
 
-            // Unlocked: preview + action buttons with real download
+            // Document Preview Container
             if (!res.locked) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   width: double.infinity,
-                  height: 240,
-                  padding: const EdgeInsets.all(20),
+                  height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(
-                        ResourceUiConstants.cardBorderRadius),
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: ResourceUiConstants.statsBorderColor,
-                        width: 1.5),
+                      color: const Color(0xFFE5E7EB),
+                      width: 1.2,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withAlpha(6),
@@ -307,11 +305,157 @@ class ResourceDetailPage extends StatelessWidget {
               ),
             ],
 
+            const SizedBox(height: 20),
+
+            // Report Problem Link
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _showReportDialog(context, ref, res.id),
+                icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.grey),
+                label: const Text(
+                  'Report a problem with this resource',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 32),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showReportDialog(
+    BuildContext context,
+    WidgetRef ref,
+    int resourceId,
+  ) async {
+    String selectedReason = 'broken_file';
+    final otherController = TextEditingController();
+    final reasons = [
+      ('broken_file', 'Broken or unreadable file'),
+      ('wrong_file', 'Wrong file content'),
+      ('incorrect_category', 'Incorrect category'),
+      ('poor_quality', 'Poor scan or audio quality'),
+      ('other', 'Other issue'),
+    ];
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.flag_outlined, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Text('Report Resource',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Why are you reporting this resource?',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    ...reasons.map((r) => RadioListTile<String>(
+                          value: r.$1,
+                          groupValue: selectedReason,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(r.$2,
+                              style: const TextStyle(fontSize: 14)),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => selectedReason = val);
+                            }
+                          },
+                        )),
+                    if (selectedReason == 'other') ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: otherController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Describe the issue...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(dialogCtx).pop(true),
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (submitted == true && context.mounted) {
+      try {
+        final ds = ref.read(resourceRemoteDatasourceProvider);
+        await ds.reportResource(
+          resourceId: resourceId,
+          reason: selectedReason,
+          otherText: otherController.text.trim().isNotEmpty
+              ? otherController.text.trim()
+              : null,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Report submitted successfully. Thank you for your feedback!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to submit report: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   String _reasonLabel(String code) {

@@ -85,6 +85,33 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                         .toList();
                   }
 
+                  if (courses.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.menu_book_outlined,
+                                size: 56, color: Colors.grey.shade400),
+                            const SizedBox(height: 16),
+                            Text(
+                              _localFilter.isNotEmpty
+                                  ? 'No courses matching "$_localFilter"'
+                                  : 'No courses available yet.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
                   return SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 20),
