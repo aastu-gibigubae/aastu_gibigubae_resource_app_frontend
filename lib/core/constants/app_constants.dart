@@ -10,8 +10,9 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // ── Timeouts ────────────────────────────────────────────────────
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  /// Render free tier cold-starts can take 50–90 seconds.
+  static const Duration connectTimeout = Duration(seconds: 90);
+  static const Duration receiveTimeout = Duration(seconds: 90);
 
   // ── Pagination ──────────────────────────────────────────────────
   static const int defaultPageSize = 20;

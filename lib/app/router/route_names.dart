@@ -32,6 +32,13 @@ class RouteNames {
   static const String paymentReview = '/payment-review';
   static const String courseResources = '/course-resources';
 
+  /// Helper — builds the course-resources path with query params.
+  static String courseResourcesPath({
+    required int year,
+    required String streamName,
+  }) =>
+      '/course-resources?year=$year&stream=${Uri.encodeComponent(streamName)}';
+
   // ── Device ────────────────────────────────────────────────────
   static const String deviceStatus = '/device-status';
   static const String profile = '/profile';

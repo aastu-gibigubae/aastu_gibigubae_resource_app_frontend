@@ -58,7 +58,8 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
+    final isAuthRequest = err.requestOptions.path.startsWith('/auth/');
+    if (err.response?.statusCode == 401 && !isAuthRequest) {
       try {
         final newToken = await _refreshAccessToken();
         if (newToken != null) {

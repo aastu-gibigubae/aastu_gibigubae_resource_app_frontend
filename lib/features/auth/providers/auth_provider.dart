@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/app_providers.dart';
 import '../../../core/constants/mock_config.dart';
 import '../../../core/constants/storage_keys.dart';
+import '../../../core/errors/error_mapper.dart';
 import '../domain/entities/user.dart';
 
 /// ================================================================
@@ -77,8 +78,9 @@ class AuthNotifier extends AsyncNotifier<User?> {
         return result.failure?.message ?? 'Login failed.';
       }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      return e.toString();
+      final failure = ErrorMapper.fromError(e);
+      state = AsyncValue.error(failure, st);
+      return failure.message;
     }
   }
 
@@ -120,8 +122,9 @@ class AuthNotifier extends AsyncNotifier<User?> {
         return result.failure?.message ?? 'Signup failed.';
       }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      return e.toString();
+      final failure = ErrorMapper.fromError(e);
+      state = AsyncValue.error(failure, st);
+      return failure.message;
     }
   }
 

@@ -7,7 +7,7 @@
 // Flip to false when the real backend is ready.
 // ================================================================
 
-const bool kMockAuth = true;
+const bool kMockAuth = false;
 
 /// Fake user returned during mock auth.
 const String kMockUserId = 'mock-user-001';

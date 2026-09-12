@@ -26,12 +26,10 @@ class DeviceFingerprintService {
   final Uuid _uuid;
 
   const DeviceFingerprintService({
-    required DeviceService deviceService,
-    required SecureStorage secureStorage,
+    required this._deviceService,
+    required this._secureStorage,
     Uuid uuid = const Uuid(),
-  })  : _deviceService = deviceService,
-        _secureStorage = secureStorage,
-        _uuid = uuid;
+  }) : _uuid = uuid;
 
   // ── Public API ─────────────────────────────────────────────────
 
