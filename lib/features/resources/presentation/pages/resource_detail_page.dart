@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/category_icons.dart';
 import '../../../../core/widgets/curved_header.dart';
@@ -7,7 +8,6 @@ import '../constants/resource_ui_constants.dart';
 import '../widgets/resource_document_hero.dart';
 
 class ResourceDetailPage extends StatelessWidget {
-  // Accepts either a ResourceItem directly or an int ID.
   final ResourceItem? resource;
   final int resourceId;
 
@@ -17,9 +17,32 @@ class ResourceDetailPage extends StatelessWidget {
     this.resourceId = 0,
   });
 
+  Future<void> _openInBrowser(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open file.')),
+      );
+    }
+  }
+
+  Future<void> _downloadFile(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not start download.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Use the passed resource, or show a placeholder if only an ID was given.
     final res = resource;
     if (res == null) {
       return Scaffold(
@@ -40,7 +63,6 @@ class ResourceDetailPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header with Document Hero Graphic
             CurvedHeader(
               showBackButton: true,
               title: res.title,
@@ -79,6 +101,17 @@ class ResourceDetailPage extends StatelessWidget {
                             color: ResourceUiConstants.textNavy,
                           ),
                         ),
+                        if (!res.locked && res.fileSizeBytes > 0) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            res.formattedSize,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -88,7 +121,7 @@ class ResourceDetailPage extends StatelessWidget {
 
             const SizedBox(height: 18),
 
-            // Locked resource message
+            // Locked resource banner
             if (res.locked)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -102,28 +135,52 @@ class ResourceDetailPage extends StatelessWidget {
                     border: Border.all(
                         color: const Color(0xFFFBBF24), width: 1),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.lock_rounded,
-                          color: Color(0xFFD97706), size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          res.message ??
-                              'This resource requires premium access.',
-                          style: const TextStyle(
-                            color: Color(0xFF92400E),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                      Row(
+                        children: [
+                          const Icon(Icons.lock_rounded,
+                              color: Color(0xFFD97706), size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              res.message ??
+                                  'This resource requires premium access.',
+                              style: const TextStyle(
+                                color: Color(0xFF92400E),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (res.reasonCode != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDE68A),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _reasonLabel(res.reasonCode!),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF92400E),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
 
-            // Reading/Preview Container
+            // Unlocked: preview + action buttons with real download
             if (!res.locked) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -157,7 +214,7 @@ class ResourceDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Document Preview & Content',
+                          'Document Preview',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -166,7 +223,7 @@ class ResourceDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '${res.formattedSize} • Ready to Read Offline',
+                          res.formattedSize,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade400,
@@ -180,25 +237,19 @@ class ResourceDetailPage extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // Action Buttons
+              // Action Buttons — use file_url from backend
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                    // Primary Open/Read Button
+                    // Open/Read — opens the backend file_url in browser
                     SizedBox(
                       width: double.infinity,
                       height: ResourceUiConstants.primaryButtonHeight,
                       child: ElevatedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Opening ${res.title} in Reader...'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
+                        onPressed: res.fileUrl != null
+                            ? () => _openInBrowser(context, res.fileUrl!)
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -220,20 +271,14 @@ class ResourceDetailPage extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // Secondary Download PDF Button
+                    // Download PDF — launches file_url for download
                     SizedBox(
                       width: double.infinity,
                       height: ResourceUiConstants.primaryButtonHeight,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Downloading ${res.title}...'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
+                        onPressed: res.fileUrl != null
+                            ? () => _downloadFile(context, res.fileUrl!)
+                            : null,
                         icon: const Icon(
                           Icons.file_download_outlined,
                           color: Colors.white,
@@ -267,5 +312,18 @@ class ResourceDetailPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _reasonLabel(String code) {
+    switch (code) {
+      case 'premium_required':
+        return 'Premium Required';
+      case 'device_mismatch':
+        return 'Device Mismatch';
+      case 'reverification_overdue':
+        return 'Re-verification Needed';
+      default:
+        return code.replaceAll('_', ' ').toUpperCase();
+    }
   }
 }

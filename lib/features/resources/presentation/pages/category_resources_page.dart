@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
@@ -44,6 +45,26 @@ class _CategoryResourcesPageState
     });
   }
 
+  Future<void> _downloadResource(ResourceItem resource) async {
+    if (resource.fileUrl == null || resource.fileUrl!.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download URL not available.')),
+      );
+      return;
+    }
+
+    final uri = Uri.parse(resource.fileUrl!);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open download link.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final params = CourseResourcesParams(
@@ -52,7 +73,6 @@ class _CategoryResourcesPageState
     );
     final resourcesAsync = ref.watch(courseResourcesProvider(params));
 
-    // Get the course name from courses provider (best-effort).
     final coursesAsync =
         ref.watch(coursesProvider(const CoursesParams()));
     final courseName = coursesAsync.whenData((result) {
@@ -67,7 +87,6 @@ class _CategoryResourcesPageState
         backgroundColor: Colors.white,
         body: Column(
           children: [
-            // Header
             CurvedHeader(
               showBackButton: true,
               onBack: () {
@@ -83,8 +102,6 @@ class _CategoryResourcesPageState
                 onChanged: _onSearchChanged,
               ),
             ),
-
-            // Resource List
             Expanded(
               child: resourcesAsync.when(
                 data: (result) {
@@ -129,17 +146,7 @@ class _CategoryResourcesPageState
                           },
                           onDownload: resource.locked
                               ? null
-                              : () {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Downloading ${resource.title}...'),
-                                      duration:
-                                          const Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
+                              : () => _downloadResource(resource),
                         ),
                       );
                     },

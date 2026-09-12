@@ -16,9 +16,16 @@ class NotificationTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: notification.isRead
+            ? Colors.white
+            : const Color(0xFFF0F7FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+        border: Border.all(
+          color: notification.isRead
+              ? const Color(0xFFE5E7EB)
+              : const Color(0xFFBFDBFE),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(6),

@@ -12,7 +12,7 @@ class ResourceItemCard extends StatelessWidget {
     super.key,
     required this.resource,
     required this.onTap,
-    required this.onDownload,
+    this.onDownload,
   });
 
   @override
@@ -22,9 +22,16 @@ class ResourceItemCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: resource.locked
+              ? const Color(0xFFFAFAFA)
+              : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: ResourceUiConstants.cardBorderColor, width: 1.2),
+          border: Border.all(
+            color: resource.locked
+                ? const Color(0xFFE5E7EB)
+                : ResourceUiConstants.cardBorderColor,
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(6),
@@ -45,32 +52,51 @@ class ResourceItemCard extends StatelessWidget {
                     resource.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: ResourceUiConstants.textNavy,
+                      color: resource.locked
+                          ? const Color(0xFF9CA3AF)
+                          : ResourceUiConstants.textNavy,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    resource.formattedSize,
-                    style: const TextStyle(
+                    resource.locked
+                        ? 'Premium required'
+                        : resource.formattedSize,
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                      color: resource.locked
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF6B7280),
                     ),
                   ),
                 ],
               ),
             ),
-            IconButton(
-              onPressed: onDownload,
-              icon: const Icon(
-                Icons.file_download_outlined,
-                color: ResourceUiConstants.textNavy,
-                size: 26,
-              ),
-            ),
+            resource.locked
+                ? Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Color(0xFFD97706),
+                      size: 20,
+                    ),
+                  )
+                : IconButton(
+                    onPressed: onDownload,
+                    icon: const Icon(
+                      Icons.file_download_outlined,
+                      color: ResourceUiConstants.textNavy,
+                      size: 26,
+                    ),
+                  ),
           ],
         ),
       ),
