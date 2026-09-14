@@ -25,8 +25,8 @@ final subscriptionStatusProvider = FutureProvider<String>((ref) async {
   return status ?? 'free';
 });
 
-/// Convenience bool — true when subscription_status == 'premium'.
+/// Convenience bool — true when subscription_status == 'premium' or 'active'.
 final isPremiumProvider = FutureProvider<bool>((ref) async {
   final status = await ref.watch(subscriptionStatusProvider.future);
-  return status == 'premium';
+  return status == 'premium' || status == 'active';
 });

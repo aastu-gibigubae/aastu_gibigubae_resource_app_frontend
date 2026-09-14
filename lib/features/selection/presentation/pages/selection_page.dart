@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -23,6 +24,30 @@ class _SelectionPageState extends State<SelectionPage> {
     'Applied Science',
     'Engineering',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSelections();
+  }
+
+  Future<void> _loadSavedSelections() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedYear = prefs.getInt('selected_academic_year');
+      final savedField = prefs.getString('selected_field');
+      if (mounted) {
+        setState(() {
+          if (savedYear != null && years.contains(savedYear)) {
+            selectedYear = savedYear;
+          }
+          if (savedField != null && fields.contains(savedField)) {
+            selectedField = savedField;
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,10 +268,19 @@ class _SelectionPageState extends State<SelectionPage> {
   // CONTINUE
   // ==============================================================
 
-  void _continue() {
+  Future<void> _continue() async {
     debugPrint('Selected year: $selectedYear');
     debugPrint('Selected field: $selectedField');
 
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('selected_academic_year', selectedYear);
+      await prefs.setString('selected_field', selectedField);
+    } catch (e) {
+      debugPrint('Failed to save selection: $e');
+    }
+
+    if (!mounted) return;
     // Navigate to Home / Resource Hub
     context.go(RouteNames.home);
   }

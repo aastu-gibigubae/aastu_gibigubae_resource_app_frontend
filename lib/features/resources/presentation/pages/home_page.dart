@@ -10,6 +10,8 @@ import '../constants/resource_ui_constants.dart';
 import '../widgets/popular_categories_grid.dart';
 import '../widgets/stream_card.dart';
 import '../../providers/resource_providers.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../auth/providers/session_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -17,6 +19,14 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final streamsAsync = ref.watch(streamsProvider);
+    final user = ref.watch(authProvider).valueOrNull;
+    final isPremiumAsync = ref.watch(isPremiumProvider);
+    final isPremium = user?.isPremium ?? isPremiumAsync.valueOrNull ?? false;
+
+    final firstName = (user != null && user.name.trim().isNotEmpty)
+        ? user.name.trim().split(' ').first
+        : 'Student';
+    final greeting = 'Hello, $firstName! 👋';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -29,9 +39,9 @@ class HomePage extends ConsumerWidget {
               titleWidget: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    ResourceUiConstants.homeGreeting,
-                    style: TextStyle(
+                  Text(
+                    greeting,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -39,35 +49,53 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                   AppSpacing.gapXs,
-                  Row(
-                    children: [
-                      const Text(
-                        ResourceUiConstants.premiumAccess,
-                        style: TextStyle(
-                          color: ResourceUiConstants.accentGold,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: isPremium
+                        ? null
+                        : () => context.push(RouteNames.premium),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isPremium
+                              ? ResourceUiConstants.premiumAccess
+                              : 'Free Plan',
+                          style: TextStyle(
+                            color: isPremium
+                                ? ResourceUiConstants.accentGold
+                                : Colors.white.withAlpha(220),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      AppSpacing.hGapSm,
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: ResourceUiConstants.accentGold,
+                        AppSpacing.hGapSm,
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isPremium
+                                ? ResourceUiConstants.accentGold
+                                : const Color(0xFF9CA3AF),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        ResourceUiConstants.activeStatus,
-                        style: TextStyle(
-                          color: ResourceUiConstants.accentGold,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(width: 6),
+                        Text(
+                          isPremium
+                              ? ResourceUiConstants.activeStatus
+                              : 'Upgrade ✨',
+                          style: TextStyle(
+                            color: isPremium
+                                ? ResourceUiConstants.accentGold
+                                : const Color(0xFFFDE68A),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            decoration:
+                                isPremium ? null : TextDecoration.underline,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
