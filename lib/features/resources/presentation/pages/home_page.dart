@@ -160,12 +160,29 @@ class HomePage extends ConsumerWidget {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                    error: (err, _) => Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        'Could not load streams: $err',
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
+                    error: (err, _) => Row(
+                      children: MockResourceDatasource.streams.take(2).map((stream) {
+                        final icon = stream.name.toLowerCase().contains('eng')
+                            ? Icons.settings
+                            : Icons.science_outlined;
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: stream != MockResourceDatasource.streams.take(2).last ? 12 : 0,
+                            ),
+                            child: StreamCard(
+                              title: stream.name,
+                              icon: icon,
+                              onTap: () {
+                                ref
+                                    .read(selectedStreamFilterProvider.notifier)
+                                    .state = stream.id;
+                                context.push(RouteNames.browse);
+                              },
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ],

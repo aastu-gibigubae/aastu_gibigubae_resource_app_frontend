@@ -1,5 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,8 +19,11 @@ import '../../features/auth/domain/usecases/login.dart';
 import '../../features/auth/domain/usecases/logout.dart';
 import '../../features/auth/domain/usecases/refresh_session.dart';
 import '../../features/auth/domain/usecases/signup.dart';
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/providers/session_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_guards.dart';
+import '../router/route_names.dart';
 
 /// ================================================================
 /// APP PROVIDERS
@@ -76,7 +80,17 @@ final dioProvider = Provider<Dio>((ref) {
   return DioClient.create(
     secureStorage: ref.watch(secureStorageProvider),
     onSessionExpired: () {
-      // The auth provider listens and handles redirect.
+      final storage = ref.read(secureStorageProvider);
+      storage.deleteAll();
+      ref.invalidate(authProvider);
+      ref.invalidate(hasSessionProvider);
+      ref.invalidate(subscriptionStatusProvider);
+      ref.invalidate(isPremiumProvider);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          ref.read(routerProvider).go(RouteNames.login);
+        } catch (_) {}
+      });
     },
   );
 });

@@ -53,12 +53,12 @@ class DioClient {
         error: true,
         logPrint: (obj) => debugPrint('[DIO] $obj'),
       ),
-      ErrorInterceptor(),
       AuthInterceptor(
         secureStorage: secureStorage,
         refreshDio: refreshDio,
         onSessionExpired: onSessionExpired,
       ),
+      ErrorInterceptor(),
     ]);
 
     return dio;

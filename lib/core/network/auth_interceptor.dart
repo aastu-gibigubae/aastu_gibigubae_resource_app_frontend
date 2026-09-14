@@ -13,22 +13,25 @@ import '../storage/secure_storage.dart';
 /// ================================================================
 
 class AuthInterceptor extends Interceptor {
-  final SecureStorage _secureStorage;
+  final SecureStorage secureStorage;
 
   /// A separate Dio instance used only for token refresh to avoid
   /// triggering this interceptor recursively.
-  final Dio _refreshDio;
+  final Dio refreshDio;
 
   /// Called when the refresh attempt itself fails (e.g. session fully
   /// expired). The app shell listens to this to redirect to login.
   final void Function()? onSessionExpired;
 
+  /// In-flight token refresh future to prevent concurrent 401s from
+  /// sending duplicate refresh requests.
+  Future<String?>? _refreshFuture;
+
   AuthInterceptor({
-    required SecureStorage secureStorage,
-    required Dio refreshDio,
+    required this.secureStorage,
+    required this.refreshDio,
     this.onSessionExpired,
-  })  : _secureStorage = secureStorage,
-        _refreshDio = refreshDio;
+  });
 
   // ── Request ────────────────────────────────────────────────────
 
@@ -37,7 +40,7 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _secureStorage.read(StorageKeys.accessToken);
+    final token = await secureStorage.read(StorageKeys.accessToken);
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
@@ -61,43 +64,66 @@ class AuthInterceptor extends Interceptor {
     final isAuthRequest = err.requestOptions.path.startsWith('/auth/');
     if (err.response?.statusCode == 401 && !isAuthRequest) {
       try {
-        final newToken = await _refreshAccessToken();
-        if (newToken != null) {
+        final newToken = await _synchronizedRefresh();
+        if (newToken != null && newToken.isNotEmpty) {
           // Re-play the failed request with the new token.
           final opts = err.requestOptions
             ..headers['Authorization'] = 'Bearer $newToken';
-          final cloned = await _refreshDio.fetch(opts);
+          final cloned = await refreshDio.fetch(opts);
           return handler.resolve(cloned);
+        } else {
+          onSessionExpired?.call();
         }
-      } catch (_) {
-        // Refresh failed — session is fully expired.
+      } catch (refreshErr) {
+        if (refreshErr is DioException &&
+            refreshErr.response?.statusCode == 401) {
+          onSessionExpired?.call();
+        }
       }
-      onSessionExpired?.call();
     }
     handler.next(err);
   }
 
   // ── Private ────────────────────────────────────────────────────
 
-  Future<String?> _refreshAccessToken() async {
-    final refreshToken = await _secureStorage.read(StorageKeys.refreshToken);
-    if (refreshToken == null) return null;
+  Future<String?> _synchronizedRefresh() {
+    if (_refreshFuture != null) {
+      return _refreshFuture!;
+    }
+    _refreshFuture = _refreshAccessToken().whenComplete(() {
+      _refreshFuture = null;
+    });
+    return _refreshFuture!;
+  }
 
-    final response = await _refreshDio.post(
+  Future<String?> _refreshAccessToken() async {
+    final refreshToken = await secureStorage.read(StorageKeys.refreshToken);
+    if (refreshToken == null || refreshToken.trim().isEmpty) return null;
+
+    final response = await refreshDio.post(
       '/auth/refresh',
       data: {'refresh_token': refreshToken},
     );
 
-    final accessToken = response.data['access_token'] as String?;
-    final newRefresh = response.data['refresh_token'] as String?;
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      final tokens = data['tokens'] is Map<String, dynamic>
+          ? data['tokens'] as Map<String, dynamic>
+          : data;
+      final accessToken =
+          tokens['access_token'] as String? ?? tokens['token'] as String?;
+      final newRefresh = tokens['refresh_token'] as String?;
 
-    if (accessToken != null) {
-      await _secureStorage.write(StorageKeys.accessToken, accessToken);
-    }
-    if (newRefresh != null) {
-      await _secureStorage.write(StorageKeys.refreshToken, newRefresh);
+      if (accessToken != null && accessToken.isNotEmpty) {
+        await secureStorage.write(StorageKeys.accessToken, accessToken);
+      }
+      if (newRefresh != null && newRefresh.isNotEmpty) {
+        await secureStorage.write(StorageKeys.refreshToken, newRefresh);
+      }
+
+      return accessToken;
     }
 
-    return accessToken;
+    return null;
   }
 }

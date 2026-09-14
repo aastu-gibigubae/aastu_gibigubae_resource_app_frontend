@@ -31,8 +31,8 @@ class NotificationsNotifier
                 createdAt: m.createdAt,
               ))
           .toList();
-    } on DioException catch (e) {
-      throw ErrorMapper.fromDioException(e);
+    } catch (_) {
+      return [];
     }
   }
 

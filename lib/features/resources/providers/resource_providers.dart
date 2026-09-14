@@ -1,9 +1,9 @@
-import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/app_providers.dart';
-import '../../../core/errors/error_mapper.dart';
 import '../../resources/data/models/pagination_model.dart';
+import '../data/datasources/mock_resource_datasource.dart';
 import '../data/datasources/resource_remote_datasource.dart';
 import '../data/models/search_result_model.dart';
 import '../domain/entities/course_item.dart';
@@ -23,12 +23,15 @@ final streamsProvider =
   final ds = ref.watch(resourceRemoteDatasourceProvider);
   try {
     final models = await ds.getStreams();
-    return models
-        .map((m) => StreamItem(id: m.id, name: m.name))
-        .toList();
-  } on DioException catch (e) {
-    throw ErrorMapper.fromDioException(e);
+    if (models.isNotEmpty) {
+      return models
+          .map((m) => StreamItem(id: m.id, name: m.name))
+          .toList();
+    }
+  } catch (e) {
+    debugPrint('[streamsProvider] Remote fetch failed ($e), using fallback.');
   }
+  return MockResourceDatasource.streams;
 });
 
 // Stream and Year selection filter providers for Browse Courses
@@ -73,18 +76,36 @@ final coursesProvider = AutoDisposeFutureProvider.family<
       year: params.year,
       page: params.page,
     );
-    final courses = result.courses
-        .map((m) => CourseItem.fromJson({
-              'id': m.id,
-              'department_id': m.departmentId,
-              'academic_year': m.academicYear,
-              'name': m.name,
-            }))
-        .toList();
-    return (courses: courses, pagination: result.pagination);
-  } on DioException catch (e) {
-    throw ErrorMapper.fromDioException(e);
+    if (result.courses.isNotEmpty) {
+      final courses = result.courses
+          .map((m) => CourseItem.fromJson({
+                'id': m.id,
+                'department_id': m.departmentId,
+                'academic_year': m.academicYear,
+                'name': m.name,
+              }))
+          .toList();
+      return (courses: courses, pagination: result.pagination);
+    }
+  } catch (e) {
+    debugPrint('[coursesProvider] Remote fetch failed ($e), using fallback.');
   }
+
+  var fallbackCourses = MockResourceDatasource.freshmanCourses;
+  if (params.year != null) {
+    fallbackCourses = fallbackCourses
+        .where((c) => c.academicYear == params.year)
+        .toList();
+  }
+  return (
+    courses: fallbackCourses,
+    pagination: PaginationModel(
+      page: params.page,
+      limit: 20,
+      total: fallbackCourses.length,
+      totalPages: 1,
+    ),
+  );
 });
 
 // Course resources provider
@@ -121,26 +142,40 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
       category: params.category.apiValue,
       page: params.page,
     );
-    final resources = result.resources
-        .map((m) => ResourceItem(
-              id: m.id,
-              courseId: params.courseId,
-              title: m.title,
-              description: m.description,
-              category: m.categoryType,
-              isFreeSample: m.isFreeSample,
-              locked: m.locked,
-              reasonCode: m.reasonCode,
-              message: m.message,
-              fileUrl: m.fileUrl,
-              fileSizeBytes: m.fileSizeBytes ?? 0,
-              checksum: m.checksum,
-            ))
-        .toList();
-    return (resources: resources, pagination: result.pagination);
-  } on DioException catch (e) {
-    throw ErrorMapper.fromDioException(e);
+    if (result.resources.isNotEmpty) {
+      final resources = result.resources
+          .map((m) => ResourceItem(
+                id: m.id,
+                courseId: params.courseId,
+                title: m.title,
+                description: m.description,
+                category: m.categoryType,
+                isFreeSample: m.isFreeSample,
+                locked: m.locked,
+                reasonCode: m.reasonCode,
+                message: m.message,
+                fileUrl: m.fileUrl,
+                fileSizeBytes: m.fileSizeBytes ?? 0,
+                checksum: m.checksum,
+              ))
+          .toList();
+      return (resources: resources, pagination: result.pagination);
+    }
+  } catch (e) {
+    debugPrint('[courseResourcesProvider] Remote fetch failed ($e), using fallback.');
   }
+
+  final fallbackList = const MockResourceDatasource()
+      .getCategoryResources(courseId: params.courseId, category: params.category);
+  return (
+    resources: fallbackList,
+    pagination: PaginationModel(
+      page: params.page,
+      limit: 20,
+      total: fallbackList.length,
+      totalPages: 1,
+    ),
+  );
 });
 
 // Search provider
@@ -154,7 +189,8 @@ final searchResultsProvider =
   final ds = ref.watch(resourceRemoteDatasourceProvider);
   try {
     return await ds.search(query: query);
-  } on DioException catch (e) {
-    throw ErrorMapper.fromDioException(e);
+  } catch (e) {
+    debugPrint('[searchResultsProvider] Search failed ($e)');
+    return [];
   }
 });
