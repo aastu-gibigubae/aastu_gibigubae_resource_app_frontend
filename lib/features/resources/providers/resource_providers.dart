@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/app_providers.dart';
+import '../../auth/providers/session_provider.dart';
 import '../../resources/data/models/pagination_model.dart';
 import '../data/datasources/mock_resource_datasource.dart';
 import '../data/datasources/resource_remote_datasource.dart';
@@ -135,6 +136,7 @@ class CourseResourcesParams {
 final courseResourcesProvider = AutoDisposeFutureProvider.family<
     ({List<ResourceItem> resources, PaginationModel pagination}),
     CourseResourcesParams>((ref, params) async {
+  final isPremium = await ref.watch(isPremiumProvider.future);
   final ds = ref.watch(resourceRemoteDatasourceProvider);
   try {
     final result = await ds.getCourseResources(
@@ -151,9 +153,9 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
                 description: m.description,
                 category: m.categoryType,
                 isFreeSample: m.isFreeSample,
-                locked: m.locked,
-                reasonCode: m.reasonCode,
-                message: m.message,
+                locked: isPremium ? false : m.locked,
+                reasonCode: isPremium ? null : m.reasonCode,
+                message: isPremium ? null : m.message,
                 fileUrl: m.fileUrl,
                 fileSizeBytes: m.fileSizeBytes ?? 0,
                 checksum: m.checksum,
@@ -165,8 +167,31 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
     debugPrint('[courseResourcesProvider] Remote fetch failed ($e), using fallback.');
   }
 
-  final fallbackList = const MockResourceDatasource()
+  final rawFallback = const MockResourceDatasource()
       .getCategoryResources(courseId: params.courseId, category: params.category);
+  final fallbackList = rawFallback.map((item) {
+    if (isPremium || item.isFreeSample) {
+      return item;
+    }
+    return ResourceItem(
+      id: item.id,
+      courseId: item.courseId,
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      isFreeSample: item.isFreeSample,
+      locked: true,
+      reasonCode: 'premium_required',
+      message: 'Upgrade to Premium to access this resource.',
+      fileUrl: null,
+      fileSizeBytes: item.fileSizeBytes,
+      checksum: item.checksum,
+      courseName: item.courseName,
+      semester: item.semester,
+      academicYear: item.academicYear,
+    );
+  }).toList();
+
   return (
     resources: fallbackList,
     pagination: PaginationModel(
