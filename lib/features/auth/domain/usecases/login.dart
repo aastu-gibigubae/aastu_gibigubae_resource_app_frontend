@@ -1,3 +1,4 @@
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/errors/failure.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
@@ -30,7 +31,7 @@ class LoginUseCase {
 
   Failure _mapError(Object e) {
     if (e is Failure) return e;
-    return UnknownFailure(e.toString());
+    return ErrorMapper.fromError(e);
   }
 }
 

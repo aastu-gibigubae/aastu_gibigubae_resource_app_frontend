@@ -124,18 +124,54 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               if (_errorMessage != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                      horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontSize: 13,
-                    ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.error_outline,
+                            color: Color(0xFFDC2626), size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: Color(0xFFB91C1C),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (_errorMessage!
+                                .toLowerCase()
+                                .contains('already exists')) ...[
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () => context.go(RouteNames.login),
+                                child: const Text(
+                                  'Tap here to Log In instead →',
+                                  style: TextStyle(
+                                    color: Color(0xFFB45309),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -208,7 +244,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             const CircularProgressIndicator(),
                             const SizedBox(height: 10),
                             Text(
-                              'Connecting to server…',
+                              'Connecting to server (waking up)…',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,

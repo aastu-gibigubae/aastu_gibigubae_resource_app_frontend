@@ -101,7 +101,8 @@ class ErrorMapper {
   // ── Backend reason_code → Failure ─────────────────────────────
 
   static Failure fromReasonCode(String code, [String? message]) {
-    switch (code) {
+    final normalized = code.toLowerCase();
+    switch (normalized) {
       case 'premium_required':
         return PremiumRequiredFailure(
             message ?? 'Upgrade to Premium to access this resource.');
@@ -113,10 +114,15 @@ class ErrorMapper {
             message ??
                 'Re-verification required. Please connect to the internet.');
       case 'invalid_credentials':
-      case 'INVALID_CREDENTIALS':
         return const InvalidCredentialsFailure();
       case 'session_expired':
         return const SessionExpiredFailure();
+      case 'email_already_exists':
+        return ValidationFailure(
+            message ?? 'An account with this email already exists. Please log in.');
+      case 'validation_error':
+        return ValidationFailure(
+            message ?? 'Validation failed. Please check your inputs.');
       default:
         return UnknownFailure(message ?? 'Unknown error: $code');
     }
@@ -151,8 +157,23 @@ class ErrorMapper {
   // ── Generic catch → Failure ───────────────────────────────────
 
   static Failure fromError(Object error) {
+    if (error is Failure) return error;
     if (error is DioException) return fromDioException(error);
     if (error is AppException) return fromAppException(error);
-    return UnknownFailure(error.toString());
+    return UnknownFailure(_cleanMessage(error.toString()));
+  }
+
+  static String _cleanMessage(String raw) {
+    var cleaned = raw;
+    final match =
+        RegExp(r'message:\s*([^,\)\n]+)', caseSensitive: false).firstMatch(cleaned);
+    if (match != null && match.group(1) != null) {
+      return match.group(1)!.trim();
+    }
+    cleaned = cleaned.replaceAll(
+        RegExp(r'^DioException\s*\[.*?\]:\s*', caseSensitive: false), '');
+    cleaned =
+        cleaned.replaceAll(RegExp(r'^Exception:\s*', caseSensitive: false), '');
+    return cleaned.trim();
   }
 }

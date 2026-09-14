@@ -83,6 +83,12 @@ class ErrorInterceptor extends Interceptor {
     if (reasonCode == 'reverification_overdue') {
       return ReverificationOverdueException(message: message);
     }
+    if (normalizedCode == 'email_already_exists' ||
+        code == 400 ||
+        code == 409 ||
+        code == 422) {
+      return ValidationException(message: message);
+    }
 
     switch (code) {
       case 401:
