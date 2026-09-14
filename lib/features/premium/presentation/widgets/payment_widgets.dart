@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../providers/premium_provider.dart';
 
 /// ===============================================================
 /// PAYMENT HEADER
@@ -146,15 +150,24 @@ class PaymentOutlineButton extends StatelessWidget {
   }
 }
 
+
 /// ===============================================================
 /// PAYMENT FEE CARD
 /// ===============================================================
 
-class PaymentFeeCard extends StatelessWidget {
+class PaymentFeeCard extends ConsumerWidget {
   const PaymentFeeCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instructionsAsync = ref.watch(premiumInstructionsProvider);
+    final priceStr =
+        instructionsAsync.valueOrNull?.price ?? '200 ETB / semester';
+    final parts = priceStr.split(' ');
+    final amount = parts.isNotEmpty ? parts[0] : '200';
+    final period =
+        parts.length > 1 ? parts.sublist(1).join(' ') : 'ETB / semester';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 22, 25, 20),
@@ -177,9 +190,9 @@ class PaymentFeeCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                '150',
-                style: TextStyle(
+              Text(
+                amount,
+                style: const TextStyle(
                   color: AppColors.secondary,
                   fontSize: 56,
                   height: .7,
@@ -190,8 +203,8 @@ class PaymentFeeCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
-                  'ETB',
-                  style: TextStyle(
+                  period,
+                  style: const TextStyle(
                     color: AppColors.secondary,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -204,7 +217,7 @@ class PaymentFeeCard extends StatelessWidget {
           const Row(
             children: [
               Text(
-                'One-time payment',
+                'Per Semester',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -236,42 +249,125 @@ class PaymentFeeCard extends StatelessWidget {
 /// BANK INFORMATION
 /// ===============================================================
 
-class PaymentBankCard extends StatelessWidget {
+class PaymentBankCard extends ConsumerWidget {
   const PaymentBankCard({super.key});
 
-  Widget _row(IconData icon, String text) {
-    return Row(
-      children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF0F4FC),
-            shape: BoxShape.circle,
+  Widget _accountTile(BuildContext context, PaymentAccount acc) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF0F4FC),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  acc.bank.toLowerCase().contains('telebirr')
+                      ? Icons.phone_android
+                      : Icons.account_balance,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  acc.bank,
+                  style: const TextStyle(
+                    color: Color(0xFF1E3A8A),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: Icon(
-            icon,
-            color: AppColors.primary,
-            size: 22,
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Account Number',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    acc.accountNumber,
+                    style: const TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon:
+                    const Icon(Icons.copy, size: 18, color: AppColors.primary),
+                tooltip: 'Copy Account Number',
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: acc.accountNumber));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${acc.bank} account copied!'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 15),
-        Text(
-          text,
-          style: const TextStyle(
-            color: Color(0xFF38557F),
-            fontSize: 18,
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Text(
+                'Name: ',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                acc.accountName,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF1E293B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instructionsAsync = ref.watch(premiumInstructionsProvider);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(28, 25, 28, 18),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -287,39 +383,50 @@ class PaymentBankCard extends StatelessWidget {
             'Make Payment To',
             style: TextStyle(
               color: Color(0xFF38557F),
-              fontSize: 25,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 5),
-          _row(Icons.account_balance, 'Bank Name'),
-          const SizedBox(height: 5),
-          _row(Icons.person, 'Account Name'),
-          const SizedBox(height: 5),
-          _row(Icons.credit_card, 'Account Number'),
-          const SizedBox(height: 5),
+          const SizedBox(height: 12),
+          instructionsAsync.when(
+            data: (instructions) => Column(
+              children: instructions.paymentAccounts
+                  .map((acc) => _accountTile(context, acc))
+                  .toList(),
+            ),
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (err, _) => const Text(
+              'Failed to load payment accounts.',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+          const SizedBox(height: 4),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFE3E7EF),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: const Row(
               children: [
                 Icon(
-                  Icons.error,
+                  Icons.info_outline_rounded,
                   color: AppColors.primary,
-                  size: 30,
+                  size: 26,
                 ),
-                SizedBox(width: 14),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'After payment, tap "I\'ve Made a Payment" '
-                    'and enter the code sent by our admin.',
+                    'After payment, send the screenshot to our Telegram bot for verification within 24 hours.',
                     style: TextStyle(
                       color: Color(0xFF38557F),
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.35,
                     ),
@@ -490,36 +597,45 @@ class PaymentStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCE0E8),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Color(0xFF28A9E0),
-                  child: Icon(
-                    Icons.send,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'For any questions, contact our admin '
-                    'on Telegram @gibigbugbaeAdmin',
-                    style: TextStyle(
-                      color: Color(0xFF38557F),
-                      fontSize: 12,
-                      height: 1.3,
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () async {
+              final uri = Uri.parse('https://t.me/aastu_freshman_bot');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCE0E8),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xFF28A9E0),
+                    child: Icon(
+                      Icons.send,
+                      color: Colors.white,
+                      size: 18,
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'For questions or verification, contact our admin '
+                      'on Telegram @aastu_freshman_bot',
+                      style: TextStyle(
+                        color: Color(0xFF38557F),
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),

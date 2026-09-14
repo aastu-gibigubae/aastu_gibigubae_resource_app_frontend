@@ -5,6 +5,8 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
+import '../../data/models/search_result_model.dart';
+import '../../domain/entities/stream_item.dart';
 import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/course_card.dart';
@@ -32,6 +34,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     setState(() {
       _localFilter = query.trim().toLowerCase();
     });
+    ref.read(searchQueryProvider.notifier).state = query.trim();
   }
 
   void _onBack() {
@@ -45,12 +48,181 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     setState(() {
       _localFilter = '';
     });
+    ref.read(searchQueryProvider.notifier).state = '';
+    ref.read(selectedStreamFilterProvider.notifier).state = null;
+    ref.read(selectedYearFilterProvider.notifier).state = null;
+  }
+
+  Widget _buildFilterChips(
+    List<StreamItem> streams,
+    int? selectedStream,
+    int? selectedYear,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: const Text('All Streams'),
+            selected: selectedStream == null,
+            onSelected: (selected) {
+              if (selected) {
+                ref.read(selectedStreamFilterProvider.notifier).state = null;
+              }
+            },
+            selectedColor: AppColors.primary,
+            labelStyle: TextStyle(
+              color: selectedStream == null ? Colors.white : const Color(0xFF374151),
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            backgroundColor: const Color(0xFFF3F4F6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ...streams.map((stream) {
+            final isSelected = selectedStream == stream.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(stream.name),
+                selected: isSelected,
+                onSelected: (selected) {
+                  ref.read(selectedStreamFilterProvider.notifier).state =
+                      selected ? stream.id : null;
+                },
+                selectedColor: AppColors.primary,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF374151),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                backgroundColor: const Color(0xFFF3F4F6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            );
+          }),
+          const SizedBox(width: 4),
+          Container(
+            width: 1,
+            height: 22,
+            color: const Color(0xFFE5E7EB),
+          ),
+          const SizedBox(width: 10),
+          ...[1, 2].map((year) {
+            final isSelected = selectedYear == year;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(year == 1 ? 'Freshman (Yr 1)' : 'Year $year'),
+                selected: isSelected,
+                onSelected: (selected) {
+                  ref.read(selectedYearFilterProvider.notifier).state =
+                      selected ? year : null;
+                },
+                selectedColor: const Color(0xFFD97706),
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF374151),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                backgroundColor: const Color(0xFFF3F4F6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResultTile(SearchResultModel result) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(6),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: result.isCourse
+                ? const Color(0xFFEFF6FF)
+                : const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            result.isCourse
+                ? Icons.menu_book_rounded
+                : Icons.description_outlined,
+            color: result.isCourse ? AppColors.primary : const Color(0xFFD97706),
+            size: 22,
+          ),
+        ),
+        title: Text(
+          result.displayName,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E3A8A),
+          ),
+        ),
+        subtitle: Text(
+          result.isCourse ? 'Course' : 'Resource Document',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 14,
+          color: Color(0xFF9CA3AF),
+        ),
+        onTap: () {
+          _searchFocusNode.unfocus();
+          if (result.isCourse) {
+            context.push(RouteNames.courseDetail, extra: result.id);
+          } else {
+            context.push(RouteNames.resourceDetail, extra: result.id);
+          }
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final coursesAsync =
-        ref.watch(coursesProvider(const CoursesParams()));
+    final selectedStream = ref.watch(selectedStreamFilterProvider);
+    final selectedYear = ref.watch(selectedYearFilterProvider);
+    final streams = ref.watch(streamsProvider).valueOrNull ?? [];
+
+    final coursesParams = CoursesParams(
+      streamId: selectedStream,
+      year: selectedYear,
+    );
+    final coursesAsync = ref.watch(coursesProvider(coursesParams));
+    final searchResultsAsync = _localFilter.isNotEmpty
+        ? ref.watch(searchResultsProvider)
+        : null;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -73,7 +245,10 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
               ),
             ),
 
-            // Courses List
+            // Stream and Year Filter Chips
+            _buildFilterChips(streams, selectedStream, selectedYear),
+
+            // Courses and Results List
             Expanded(
               child: coursesAsync.when(
                 data: (result) {
@@ -85,7 +260,15 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                         .toList();
                   }
 
-                  if (courses.isEmpty) {
+                  final searchResults = searchResultsAsync?.valueOrNull ?? [];
+                  final resourceResults =
+                      searchResults.where((r) => r.isResource).toList();
+
+                  final hasFilters = selectedStream != null ||
+                      selectedYear != null ||
+                      _localFilter.isNotEmpty;
+
+                  if (courses.isEmpty && resourceResults.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32),
@@ -97,8 +280,8 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                             const SizedBox(height: 16),
                             Text(
                               _localFilter.isNotEmpty
-                                  ? 'No courses matching "$_localFilter"'
-                                  : 'No courses available yet.',
+                                  ? 'No results matching "$_localFilter"'
+                                  : 'No courses found for selected filters.',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -106,6 +289,14 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                               ),
                               textAlign: TextAlign.center,
                             ),
+                            if (hasFilters) ...[
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                onPressed: _onSeeAll,
+                                icon: const Icon(Icons.refresh, size: 18),
+                                label: const Text('Clear Filters'),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -114,16 +305,22 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 20),
+                        horizontal: 20, vertical: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              ResourceUiConstants.freshmanCourses,
-                              style: TextStyle(
+                            Text(
+                              selectedStream != null
+                                  ? streams
+                                          .where((s) => s.id == selectedStream)
+                                          .firstOrNull
+                                          ?.name ??
+                                      ResourceUiConstants.freshmanCourses
+                                  : ResourceUiConstants.freshmanCourses,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
@@ -143,7 +340,9 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
+
+                        // Matching courses
                         ...courses.map(
                           (course) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
@@ -153,12 +352,27 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                                 _searchFocusNode.unfocus();
                                 context.push(
                                   RouteNames.courseDetail,
-                                  extra: course.id,
+                                  extra: course,
                                 );
                               },
                             ),
                           ),
                         ),
+
+                        // If searching, also display any matching resources from global search
+                        if (resourceResults.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Matching Resources',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...resourceResults.map(_buildSearchResultTile),
+                        ],
                       ],
                     ),
                   );
@@ -183,7 +397,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => ref.invalidate(
-                            coursesProvider(const CoursesParams()),
+                            coursesProvider(coursesParams),
                           ),
                           child: const Text('Retry'),
                         ),

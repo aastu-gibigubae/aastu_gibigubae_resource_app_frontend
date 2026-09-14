@@ -31,6 +31,10 @@ final streamsProvider =
   }
 });
 
+// Stream and Year selection filter providers for Browse Courses
+final selectedStreamFilterProvider = StateProvider<int?>((ref) => null);
+final selectedYearFilterProvider = StateProvider<int?>((ref) => null);
+
 // Courses provider with optional filters
 class CoursesParams {
   final int? streamId;

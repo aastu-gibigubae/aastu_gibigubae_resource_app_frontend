@@ -9,6 +9,7 @@ import '../../features/onboarding/presentation/pages/welcome_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/premium/presentation/pages/payment_review_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/resources/domain/entities/course_item.dart';
 import '../../features/resources/domain/entities/resource_category_type.dart';
 import '../../features/resources/domain/entities/resource_item.dart';
 import '../../features/resources/presentation/pages/browse_courses_page.dart';
@@ -128,6 +129,15 @@ GoRouter createRouter({
         path: RouteNames.courseDetail,
         name: RouteNames.courseDetail,
         pageBuilder: (context, state) {
+          if (state.extra is CourseItem) {
+            final course = state.extra as CourseItem;
+            return MaterialPage(
+              child: CourseCategoriesPage(
+                courseId: course.id,
+                initialCourse: course,
+              ),
+            );
+          }
           final courseId = (state.extra is int) ? state.extra as int : 1;
           return MaterialPage(
             child: CourseCategoriesPage(courseId: courseId),

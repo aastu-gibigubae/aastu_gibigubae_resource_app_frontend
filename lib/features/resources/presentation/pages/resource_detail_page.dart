@@ -6,6 +6,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/category_icons.dart';
 import '../../../../core/widgets/curved_header.dart';
+import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
@@ -47,7 +48,10 @@ class ResourceDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final res = resource;
+    final res = resource ??
+        (resourceId > 0
+            ? const MockResourceDatasource().getResourceById(resourceId)
+            : null);
     if (res == null) {
       return Scaffold(
         backgroundColor: Colors.white,

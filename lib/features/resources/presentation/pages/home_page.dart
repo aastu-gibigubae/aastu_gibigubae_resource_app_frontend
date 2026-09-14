@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/category_icons.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
+import '../../data/datasources/mock_resource_datasource.dart';
+import '../../domain/entities/resource_category_type.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/popular_categories_grid.dart';
+import '../widgets/recent_activity_tile.dart';
 import '../widgets/stream_card.dart';
 import '../../providers/resource_providers.dart';
 import '../../../auth/providers/auth_provider.dart';
@@ -138,7 +142,13 @@ class HomePage extends ConsumerWidget {
                             child: StreamCard(
                               title: stream.name,
                               icon: icon,
-                              onTap: () => context.push(RouteNames.browse),
+                              onTap: () {
+                                ref
+                                    .read(
+                                        selectedStreamFilterProvider.notifier)
+                                    .state = stream.id;
+                                context.push(RouteNames.browse);
+                              },
                             ),
                           ),
                         );
@@ -199,15 +209,8 @@ class HomePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   PopularCategoriesGrid(
-                    onCategoryTap: (category) {
-                      context.push(
-                        RouteNames.courseCategoryResources,
-                        extra: {
-                          'courseId': 1,
-                          'category': category,
-                        },
-                      );
-                    },
+                    onCategoryTap: (category) =>
+                        _showCoursePickerForCategory(context, ref, category),
                   ),
                 ],
               ),
@@ -215,8 +218,149 @@ class HomePage extends ConsumerWidget {
 
             AppSpacing.gapLg,
 
+            // Recent Activity Section
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ResourceUiConstants.horizontalPadding,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Recent Activity',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...MockResourceDatasource.recentActivities.map(
+                    (act) => RecentActivityTile(
+                      activity: act,
+                      onTap: () {
+                        context.push(
+                          RouteNames.courseCategoryResources,
+                          extra: {
+                            'courseId': act.id,
+                            'category': ResourceCategoryType.handouts,
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 28),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showCoursePickerForCategory(
+    BuildContext context,
+    WidgetRef ref,
+    ResourceCategoryType category,
+  ) {
+    final coursesAsync = ref.read(coursesProvider(const CoursesParams()));
+    final courses = coursesAsync.valueOrNull?.courses ??
+        MockResourceDatasource.freshmanCourses;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Select Course for ${category.label}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Choose which course resources to explore:',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: courses.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                  itemBuilder: (context, index) {
+                    final course = courses[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
+                      leading: CourseIconBadge(
+                        iconKey: course.iconKey,
+                        size: 40,
+                      ),
+                      title: Text(
+                        course.name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E3A8A),
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${course.academicYear}${course.academicYear == 1 ? 'st' : 'nd'} Year • ${course.semester}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push(
+                          RouteNames.courseCategoryResources,
+                          extra: {
+                            'courseId': course.id,
+                            'category': category,
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
