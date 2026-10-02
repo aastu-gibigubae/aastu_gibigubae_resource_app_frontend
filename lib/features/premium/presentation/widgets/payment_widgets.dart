@@ -217,24 +217,26 @@ class PaymentFeeCard extends ConsumerWidget {
           const Row(
             children: [
               Text(
-                'Per Semester',
+                'Valid for 12 months from approval',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Icon(
                 Icons.circle,
                 color: AppColors.secondary,
-                size: 7,
+                size: 6,
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Text(
                 'Full Access',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -423,7 +425,7 @@ class PaymentBankCard extends ConsumerWidget {
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'After payment, send the screenshot to our Telegram bot for verification within 24 hours.',
+                    'Message your payment screenshot and name to @gibigubae_admin on Telegram. Your account will be activated once verified.',
                     style: TextStyle(
                       color: Color(0xFF38557F),
                       fontSize: 12,
@@ -600,7 +602,7 @@ class PaymentStatusCard extends StatelessWidget {
           InkWell(
             borderRadius: BorderRadius.circular(18),
             onTap: () async {
-              final uri = Uri.parse('https://t.me/aastu_freshman_bot');
+              final uri = Uri.parse('https://t.me/gibigubae_admin');
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
@@ -626,7 +628,7 @@ class PaymentStatusCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'For questions or verification, contact our admin '
-                      'on Telegram @aastu_freshman_bot',
+                      'on Telegram @gibigubae_admin',
                       style: TextStyle(
                         color: Color(0xFF38557F),
                         fontSize: 12,

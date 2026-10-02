@@ -16,10 +16,10 @@ class PremiumPage extends ConsumerWidget {
       BuildContext context, PremiumInstructions? instructions) {
     final steps = instructions?.steps ??
         [
-          'Transfer 200 ETB to one of the payment accounts.',
+          'Transfer 150 ETB to one of the payment accounts.',
           'Take a screenshot of the payment confirmation.',
-          'Send the screenshot to our Telegram bot for verification.',
-          'Your account will be activated within 24 hours.',
+          'Message your payment screenshot and name to @gibigubae_admin on Telegram.',
+          'Your account will be activated once verified — usually within a few hours.',
         ];
 
     showModalBottomSheet(
@@ -151,7 +151,7 @@ class PremiumPage extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 PaymentPrimaryButton(
-                  text: "I've Made a Payment",
+                  text: "I've Sent my Payment",
                   onPressed: () {
                     context.go(RouteNames.paymentReview);
                   },
@@ -169,7 +169,7 @@ class PremiumPage extends ConsumerWidget {
                 InkWell(
                   onTap: () async {
                     final url = instructions?.telegramUrl ??
-                        'https://t.me/aastu_freshman_bot';
+                        'https://t.me/gibigubae_admin';
                     final uri = Uri.parse(url);
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri,

@@ -1,11 +1,11 @@
 {
-  "title": "Go Premium",
-  "subtitle": "Get unlimited access to all course resources",
-  "price": "200 ETB / semester",
+  "title": "Get Access",
+  "subtitle": "Pay the access fee to unlock all student resources, past exams, notes, assignments and more.",
+  "price": "150 ETB",
   "payment_accounts": [
     {
-      "bank": "Commercial Bank of Ethiopia (CBE)",
-      "account_number": "1000123456789",
+      "bank": "CBE",
+      "account_number": "1000100012345",
       "account_name": "AASTU Gibigubae"
     },
     {
@@ -15,12 +15,12 @@
     }
   ],
   "steps": [
-    "Transfer 200 ETB to one of the accounts above.",
+    "Transfer 150 ETB to one of the accounts above.",
     "Take a screenshot of the payment confirmation.",
-    "Send the screenshot to our Telegram bot for verification.",
-    "Your account will be activated within 24 hours."
+    "Message your payment screenshot and name to @gibigubae_admin on Telegram.",
+    "Your account will be activated once verified — usually within a few hours."
   ],
-  "telegram_handle": "@aastu_freshman_bot",
-  "telegram_url": "https://t.me/aastu_freshman_bot",
-  "note": "Premium access is valid for one semester. Your device will be verified during login."
+  "telegram_handle": "@gibigubae_admin",
+  "telegram_url": "https://t.me/gibigubae_admin",
+  "note": "Valid for 12 months from approval • Full Access"
 }
