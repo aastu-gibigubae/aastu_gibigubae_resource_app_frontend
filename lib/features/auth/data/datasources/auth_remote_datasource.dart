@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../models/auth_response_model.dart';
 import '../models/token_model.dart';
 
