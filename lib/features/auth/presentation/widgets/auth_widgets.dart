@@ -217,9 +217,9 @@ class AuthTextField extends StatelessWidget {
         textAlignVertical: TextAlignVertical.center,
 
         style: const TextStyle(
-          color: AuthColors.hint,
-          fontSize: 10,
-          fontWeight: FontWeight.w100,
+          color: AuthColors.primary,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
         ),
 
         decoration: InputDecoration(
