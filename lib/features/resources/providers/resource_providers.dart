@@ -74,22 +74,35 @@ final departmentsProvider =
   }
 });
 
-// Stream, Year, and Department selection filter providers for Browse Courses
+// Stream selection filter provider for Browse Courses
 final selectedStreamFilterProvider = StateProvider<int?>((ref) => null);
-final selectedYearFilterProvider = StateProvider<int?>((ref) => null);
+final selectedYearFilterProvider = StateProvider<int?>((ref) => 1);
 final selectedDepartmentFilterProvider = StateProvider<int?>((ref) => null);
 
-// Courses provider with optional filters
+// Icon resolver for courses returned by backend API
+String _resolveCourseIconKey(String name) {
+  final lower = name.toLowerCase();
+  if (lower.contains('english') || lower.contains('communicative')) return 'english';
+  if (lower.contains('math') || lower.contains('calculus') || lower.contains('algebra')) return 'math';
+  if (lower.contains('physic')) return 'physics';
+  if (lower.contains('logic') || lower.contains('critical')) return 'logic';
+  if (lower.contains('psychology')) return 'psychology';
+  if (lower.contains('chem')) return 'physics';
+  if (lower.contains('programming') || lower.contains('computer') || lower.contains('c++')) return 'logic';
+  return 'book';
+}
+
+// Courses provider with optional filters (Freshman = Year 1)
 class CoursesParams {
   final int? streamId;
   final int? departmentId;
-  final int? year;
+  final int year;
   final int page;
 
   const CoursesParams({
     this.streamId,
     this.departmentId,
-    this.year,
+    this.year = 1,
     this.page = 1,
   });
 
@@ -117,24 +130,28 @@ final coursesProvider = AutoDisposeFutureProvider.family<
       year: params.year,
       page: params.page,
     );
-    // Accept the API result even if empty — empty means no courses match
-    // the filters, not an error. Only fall back to mocks on network failure.
-    final courses = result.courses
-        .map((m) => CourseItem.fromJson({
-              'id': m.id,
-              'department_id': m.departmentId,
-              'academic_year': m.academicYear,
-              'name': m.name,
-            }))
-        .toList();
-    return (courses: courses, pagination: result.pagination);
+    // If backend returns courses, map and return them
+    if (result.courses.isNotEmpty) {
+      final courses = result.courses
+          .map((m) => CourseItem(
+                id: m.id,
+                departmentId: m.departmentId,
+                name: m.name,
+                academicYear: m.academicYear,
+                iconKey: _resolveCourseIconKey(m.name),
+                resourceCount: 16,
+                semesterLabel: 'Semester 1',
+              ))
+          .toList();
+      return (courses: courses, pagination: result.pagination);
+    }
   } catch (e) {
     debugPrint('[coursesProvider] Remote fetch failed ($e), using fallback.');
   }
 
-  // Mock fallback only on network/parse error — never on empty results.
+  // Graceful fallback for freshman courses when backend database is not yet seeded
   var fallbackCourses = MockResourceDatasource.freshmanCourses;
-  if (params.year != null) {
+  if (params.year != 0) {
     fallbackCourses = fallbackCourses
         .where((c) => c.academicYear == params.year)
         .toList();

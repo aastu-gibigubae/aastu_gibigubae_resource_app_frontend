@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aastu_gibigubae_resource_app_frontend/features/resources/domain/entities/course_item.dart';
 import 'package:aastu_gibigubae_resource_app_frontend/features/resources/providers/resource_providers.dart';
 
 void main() {
@@ -13,12 +14,24 @@ void main() {
       expect(p1, isNot(equals(p3)));
     });
 
-    test('accepts null streamId and year as defaults', () {
+    test('defaults to year 1 for freshman with null streamId', () {
       const p = CoursesParams();
       expect(p.streamId, isNull);
-      expect(p.year, isNull);
+      expect(p.year, 1);
       expect(p.departmentId, isNull);
       expect(p.page, 1);
+    });
+
+    test('freshman CourseItem defaults semester to Semester 1 and resources to 16', () {
+      const course = CourseItem(
+        id: 1,
+        departmentId: 1,
+        name: 'Communicative English I',
+        academicYear: 1,
+      );
+      expect(course.academicYear, 1);
+      expect(course.semester, 'Semester 1');
+      expect(course.resourceCount, 16);
     });
   });
 }

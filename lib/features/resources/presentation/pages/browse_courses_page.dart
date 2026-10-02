@@ -51,27 +51,25 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     });
     ref.read(searchQueryProvider.notifier).state = '';
     ref.read(selectedStreamFilterProvider.notifier).state = null;
-    ref.read(selectedYearFilterProvider.notifier).state = null;
-    ref.read(selectedDepartmentFilterProvider.notifier).state = null;
   }
 
-  Widget _buildFilterChips(
+  Widget _buildStreamChips(
     List<StreamItem> streams,
     int? selectedStream,
-    int? selectedYear,
   ) {
+    if (streams.isEmpty) return const SizedBox.shrink();
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
           ChoiceChip(
-            label: const Text('All Streams'),
+            label: const Text('All Freshman'),
             selected: selectedStream == null,
             onSelected: (selected) {
               if (selected) {
                 ref.read(selectedStreamFilterProvider.notifier).state = null;
-                ref.read(selectedDepartmentFilterProvider.notifier).state = null;
               }
             },
             selectedColor: AppColors.primary,
@@ -96,115 +94,10 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                 onSelected: (selected) {
                   ref.read(selectedStreamFilterProvider.notifier).state =
                       selected ? stream.id : null;
-                  // Reset department when stream changes
-                  ref.read(selectedDepartmentFilterProvider.notifier).state =
-                      null;
                 },
                 selectedColor: AppColors.primary,
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : const Color(0xFF374151),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-                backgroundColor: const Color(0xFFF3F4F6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(width: 4),
-          Container(
-            width: 1,
-            height: 22,
-            color: const Color(0xFFE5E7EB),
-          ),
-          const SizedBox(width: 10),
-          ...[1, 2].map((year) {
-            final isSelected = selectedYear == year;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(year == 1 ? 'Freshman (Yr 1)' : 'Year $year'),
-                selected: isSelected,
-                onSelected: (selected) {
-                  ref.read(selectedYearFilterProvider.notifier).state =
-                      selected ? year : null;
-                  // Reset department when year changes
-                  ref.read(selectedDepartmentFilterProvider.notifier).state =
-                      null;
-                },
-                selectedColor: const Color(0xFFD97706),
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF374151),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-                backgroundColor: const Color(0xFFF3F4F6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDepartmentChips(
-    List<({int id, String name})> departments,
-    int? selectedDepartment,
-  ) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.school_outlined,
-                size: 16, color: Color(0xFF6B7280)),
-          ),
-          ChoiceChip(
-            label: const Text('All Departments'),
-            selected: selectedDepartment == null,
-            onSelected: (selected) {
-              if (selected) {
-                ref.read(selectedDepartmentFilterProvider.notifier).state =
-                    null;
-              }
-            },
-            selectedColor: const Color(0xFF7C3AED),
-            labelStyle: TextStyle(
-              color: selectedDepartment == null
-                  ? Colors.white
-                  : const Color(0xFF374151),
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-            backgroundColor: const Color(0xFFF3F4F6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ...departments.map((dept) {
-            final isSelected = selectedDepartment == dept.id;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(dept.name),
-                selected: isSelected,
-                onSelected: (selected) {
-                  ref
-                      .read(selectedDepartmentFilterProvider.notifier)
-                      .state = selected ? dept.id : null;
-                },
-                selectedColor: const Color(0xFF7C3AED),
-                labelStyle: TextStyle(
-                  color:
-                      isSelected ? Colors.white : const Color(0xFF374151),
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -289,22 +182,11 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
   @override
   Widget build(BuildContext context) {
     final selectedStream = ref.watch(selectedStreamFilterProvider);
-    final selectedYear = ref.watch(selectedYearFilterProvider);
-    final selectedDepartment = ref.watch(selectedDepartmentFilterProvider);
     final streams = ref.watch(streamsProvider).valueOrNull ?? [];
-
-    // Fetch departments when a stream is selected and year >= 2
-    final showDepartments =
-        selectedStream != null && (selectedYear ?? 1) >= 2;
-    final departmentsAsync = showDepartments
-        ? ref.watch(departmentsProvider(selectedStream))
-        : null;
-    final departments = departmentsAsync?.valueOrNull ?? [];
 
     final coursesParams = CoursesParams(
       streamId: selectedStream,
-      departmentId: selectedDepartment,
-      year: selectedYear,
+      year: 1, // Strictly Year 1 for Freshman
     );
     final coursesAsync = ref.watch(coursesProvider(coursesParams));
     final searchResultsAsync = _localFilter.isNotEmpty
@@ -324,7 +206,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
               onBack: _onBack,
               title: ResourceUiConstants.browseTitle,
               subtitle: ResourceUiConstants.browseSubtitle,
-              subtitleColor: ResourceUiConstants.accentGold,
+              subtitleColor: Colors.white.withAlpha(220),
               bottomChild: SearchPillBar(
                 controller: _searchController,
                 focusNode: _searchFocusNode,
@@ -332,12 +214,8 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
               ),
             ),
 
-            // Stream and Year Filter Chips
-            _buildFilterChips(streams, selectedStream, selectedYear),
-
-            // Department filter (visible when year >= 2 and stream is selected)
-            if (showDepartments && departments.isNotEmpty)
-              _buildDepartmentChips(departments, selectedDepartment),
+            // Stream Filter Chips (Freshman Streams only: Engineering / Applied Science)
+            _buildStreamChips(streams, selectedStream),
 
             // Courses and Results List
             Expanded(
@@ -356,7 +234,6 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                       searchResults.where((r) => r.isResource).toList();
 
                   final hasFilters = selectedStream != null ||
-                      selectedYear != null ||
                       _localFilter.isNotEmpty;
 
                   if (courses.isEmpty && resourceResults.isEmpty) {
@@ -405,11 +282,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                           children: [
                             Text(
                               selectedStream != null
-                                  ? streams
-                                          .where((s) => s.id == selectedStream)
-                                          .firstOrNull
-                                          ?.name ??
-                                      ResourceUiConstants.freshmanCourses
+                                  ? '${streams.where((s) => s.id == selectedStream).firstOrNull?.name ?? "Freshman"} Courses'
                                   : ResourceUiConstants.freshmanCourses,
                               style: const TextStyle(
                                 fontSize: 18,
@@ -433,12 +306,18 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                         ),
                         const SizedBox(height: 14),
 
-                        // Matching courses
-                        ...courses.map(
-                          (course) => Padding(
+                        // Matching courses (top card highlighted matching Figma image copy 13.png)
+                        ...courses.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final course = entry.value;
+                          final isHighlighted = index == 0 &&
+                              _localFilter.isEmpty &&
+                              selectedStream == null;
+                          return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: CourseCard(
                               course: course,
+                              isHighlighted: isHighlighted,
                               onTap: () {
                                 _searchFocusNode.unfocus();
                                 context.push(
@@ -447,8 +326,8 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                                 );
                               },
                             ),
-                          ),
-                        ),
+                          );
+                        }),
 
                         // If searching, also display any matching resources from global search
                         if (resourceResults.isNotEmpty) ...[
