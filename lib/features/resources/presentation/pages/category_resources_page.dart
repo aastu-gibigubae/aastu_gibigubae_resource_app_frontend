@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
@@ -9,6 +8,7 @@ import '../../domain/entities/resource_category_type.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
+import '../widgets/download_success_dialog.dart';
 import '../widgets/resource_item_card.dart';
 
 class CategoryResourcesPage extends ConsumerStatefulWidget {
@@ -54,14 +54,25 @@ class _CategoryResourcesPageState
       return;
     }
 
-    final uri = Uri.parse(resource.fileUrl!);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
+    try {
+      final downloadService = ref.read(resourceDownloadServiceProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open download link.')),
+        const SnackBar(
+          content: Text('Downloading resource into app storage...'),
+          duration: Duration(seconds: 1),
+        ),
       );
+      await downloadService.downloadResource(resource);
+      ref.invalidate(isResourceDownloadedProvider(resource.id));
+      if (mounted) {
+        await showDownloadSuccessDialog(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
     }
   }
 

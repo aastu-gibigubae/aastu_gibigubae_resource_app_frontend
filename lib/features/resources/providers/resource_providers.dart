@@ -40,6 +40,8 @@ final downloadedResourceIdsProvider =
 });
 
 // Streams provider
+// Streams are a tiny, bounded list (2 items). Mock fallback is acceptable
+// here since these rarely change and the backend may be cold-starting.
 final streamsProvider =
     AutoDisposeFutureProvider<List<StreamItem>>((ref) async {
   final ds = ref.watch(resourceRemoteDatasourceProvider);
@@ -98,21 +100,22 @@ final coursesProvider = AutoDisposeFutureProvider.family<
       year: params.year,
       page: params.page,
     );
-    if (result.courses.isNotEmpty) {
-      final courses = result.courses
-          .map((m) => CourseItem.fromJson({
-                'id': m.id,
-                'department_id': m.departmentId,
-                'academic_year': m.academicYear,
-                'name': m.name,
-              }))
-          .toList();
-      return (courses: courses, pagination: result.pagination);
-    }
+    // Accept the API result even if empty — empty means no courses match
+    // the filters, not an error. Only fall back to mocks on network failure.
+    final courses = result.courses
+        .map((m) => CourseItem.fromJson({
+              'id': m.id,
+              'department_id': m.departmentId,
+              'academic_year': m.academicYear,
+              'name': m.name,
+            }))
+        .toList();
+    return (courses: courses, pagination: result.pagination);
   } catch (e) {
     debugPrint('[coursesProvider] Remote fetch failed ($e), using fallback.');
   }
 
+  // Mock fallback only on network/parse error — never on empty results.
   var fallbackCourses = MockResourceDatasource.freshmanCourses;
   if (params.year != null) {
     fallbackCourses = fallbackCourses
@@ -165,29 +168,32 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
       category: params.category.apiValue,
       page: params.page,
     );
-    if (result.resources.isNotEmpty) {
-      final resources = result.resources
-          .map((m) => ResourceItem(
-                id: m.id,
-                courseId: params.courseId,
-                title: m.title,
-                description: m.description,
-                category: m.categoryType,
-                isFreeSample: m.isFreeSample,
-                locked: isPremium ? false : m.locked,
-                reasonCode: isPremium ? null : m.reasonCode,
-                message: isPremium ? null : m.message,
-                fileUrl: m.fileUrl,
-                fileSizeBytes: m.fileSizeBytes ?? 0,
-                checksum: m.checksum,
-              ))
-          .toList();
-      return (resources: resources, pagination: result.pagination);
-    }
+    // Accept the API result even if empty — empty means no resources exist
+    // for this (course, category) pair yet. The UI should show "No resources"
+    // instead of fake mock data.
+    final resources = result.resources
+        .map((m) => ResourceItem(
+              id: m.id,
+              courseId: params.courseId,
+              title: m.title,
+              description: m.description,
+              category: m.categoryType,
+              isFreeSample: m.isFreeSample,
+              locked: isPremium ? false : m.locked,
+              reasonCode: isPremium ? null : m.reasonCode,
+              message: isPremium ? null : m.message,
+              fileUrl: m.fileUrl,
+              fileSizeBytes: m.fileSizeBytes ?? 0,
+              checksum: m.checksum,
+            ))
+        .toList();
+    return (resources: resources, pagination: result.pagination);
   } catch (e) {
-    debugPrint('[courseResourcesProvider] Remote fetch failed ($e), using fallback.');
+    debugPrint(
+        '[courseResourcesProvider] Remote fetch failed ($e), using fallback.');
   }
 
+  // Mock fallback only on network/parse error — never on empty API results.
   final rawFallback = const MockResourceDatasource()
       .getCategoryResources(courseId: params.courseId, category: params.category);
   final fallbackList = rawFallback.map((item) {
