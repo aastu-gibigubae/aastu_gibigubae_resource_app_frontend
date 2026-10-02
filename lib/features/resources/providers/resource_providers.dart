@@ -48,8 +48,29 @@ final downloadedResourceIdsProvider =
 // Returns list of all downloaded resources for offline viewing
 final downloadedResourcesProvider =
     FutureProvider<List<ResourceItem>>((ref) async {
+  final isPremium = await ref.watch(isPremiumProvider.future);
   final service = ref.watch(resourceDownloadServiceProvider);
-  return service.getDownloadedResources();
+  final rawItems = await service.getDownloadedResources();
+  return rawItems.map((item) {
+    final locked = !isPremium && !item.isFreeSample;
+    return ResourceItem(
+      id: item.id,
+      courseId: item.courseId,
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      isFreeSample: item.isFreeSample,
+      locked: locked,
+      reasonCode: locked ? 'premium_required' : null,
+      message: locked ? 'Subscription expired. Renew to access.' : null,
+      fileUrl: item.fileUrl,
+      fileSizeBytes: item.fileSizeBytes,
+      checksum: item.checksum,
+      courseName: item.courseName,
+      semester: item.semester,
+      academicYear: item.academicYear,
+    );
+  }).toList();
 });
 
 // Streams provider with offline cache support
@@ -293,12 +314,32 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
     category: params.category.apiValue,
   );
   if (cached.isNotEmpty) {
+    final mappedCached = cached.map((item) {
+      final locked = !isPremium && !item.isFreeSample;
+      return ResourceItem(
+        id: item.id,
+        courseId: item.courseId,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        isFreeSample: item.isFreeSample,
+        locked: locked,
+        reasonCode: locked ? 'premium_required' : item.reasonCode,
+        message: locked ? 'Subscription required' : item.message,
+        fileUrl: item.fileUrl,
+        fileSizeBytes: item.fileSizeBytes,
+        checksum: item.checksum,
+        courseName: item.courseName,
+        semester: item.semester,
+        academicYear: item.academicYear,
+      );
+    }).toList();
     return (
-      resources: cached,
+      resources: mappedCached,
       pagination: PaginationModel(
         page: params.page,
         limit: 20,
-        total: cached.length,
+        total: mappedCached.length,
         totalPages: 1,
       ),
     );

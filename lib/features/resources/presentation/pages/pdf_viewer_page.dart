@@ -6,8 +6,10 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/errors/error_mapper.dart';
+import '../../../auth/providers/session_provider.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../widgets/download_success_dialog.dart';
@@ -47,6 +49,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
   String? _localPath;       // path to the resolved PDF file
   bool _isReady = false;    // true once PDFView is ready to render
   bool _isLoading = true;   // true while resolving path
+  bool _isLocked = false;    // true if premium resource is locked due to expired subscription
   String? _loadError;       // non-null if resolution/render failed
 
   // ── Page tracking ──────────────────────────────────────────────
@@ -93,6 +96,18 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
   ///   3. If neither works → show error.
   Future<void> _resolveSource() async {
     final res = widget.resource;
+    final isPremium = await ref.read(isPremiumProvider.future);
+
+    // Block access if resource requires premium and user subscription is expired/inactive
+    if (res != null && !res.isFreeSample && !isPremium) {
+      if (mounted) {
+        setState(() {
+          _isLocked = true;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     // Check sandbox first
     if (res != null) {
@@ -307,7 +322,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
               ),
 
               // Download button
-              if (res != null && !isDownloaded)
+              if (res != null && !isDownloaded && !_isLocked)
                 _isDownloading
                     ? Stack(
                         alignment: Alignment.center,
@@ -456,6 +471,92 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
   // ── Body ──────────────────────────────────────────────────────
 
   Widget _buildBody() {
+    // Locked / Expired access state
+    if (_isLocked) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_rounded,
+                  size: 40,
+                  color: Color(0xFFD97706),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Subscription Expired',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'This course material requires an active subscription. Please renew or upgrade your plan to access this resource.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push(RouteNames.premium),
+                  icon: const Icon(Icons.star_rounded, color: Colors.white),
+                  label: const Text(
+                    'Renew Subscription',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.home);
+                  }
+                },
+                child: const Text(
+                  'Go Back',
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Loading state
     if (_isLoading) {
       return const Center(

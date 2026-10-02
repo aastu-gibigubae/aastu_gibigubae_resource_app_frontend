@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/app_providers.dart';
 import '../../../core/constants/storage_keys.dart';
 
+import 'auth_provider.dart';
+
 /// ================================================================
 /// SESSION PROVIDER
 ///
@@ -25,8 +27,32 @@ final subscriptionStatusProvider = FutureProvider<String>((ref) async {
   return status ?? 'free';
 });
 
-/// Convenience bool — true when subscription_status == 'premium' or 'active'.
+/// Convenience bool — true when subscription is active and not expired.
+/// Also enforces the 7-day offline verification rule if the user has been
+/// offline for more than 7 days since last online verification.
 final isPremiumProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(authProvider).valueOrNull;
+  if (user != null) {
+    return user.isPremium;
+  }
+
   final status = await ref.watch(subscriptionStatusProvider.future);
-  return status == 'premium' || status == 'active';
+  if (status != 'premium' && status != 'active') {
+    return false;
+  }
+
+  // 7-day offline re-verification rule check
+  final storage = ref.watch(secureStorageProvider);
+  final lastVerifStr = await storage.read(StorageKeys.lastVerification);
+  if (lastVerifStr != null) {
+    final lastVerif = DateTime.tryParse(lastVerifStr);
+    if (lastVerif != null) {
+      final daysSinceVerif = DateTime.now().difference(lastVerif).inDays;
+      if (daysSinceVerif >= 7) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 });

@@ -274,7 +274,7 @@ class ResourceLocalDatasource {
           StorageKeys.colFilePath: filePath,
           StorageKeys.colChecksum: resource.checksum ?? '',
           StorageKeys.colCachedAt: now,
-          StorageKeys.colIsPremium: resource.locked ? 1 : 0,
+          StorageKeys.colIsPremium: resource.isFreeSample ? 0 : 1,
           StorageKeys.colTitle: resource.title,
           StorageKeys.colCategory: resource.category.apiValue,
           StorageKeys.colCourseName: resource.courseName,
@@ -327,6 +327,7 @@ class ResourceLocalDatasource {
           final categoryStr = (r[StorageKeys.colCategory] as String?) ?? 'handouts';
           final courseName = (r[StorageKeys.colCourseName] as String?) ?? '';
           final fileSizeBytes = (r[StorageKeys.colFileSizeBytes] as int?) ?? 0;
+          final isPremiumItem = (r[StorageKeys.colIsPremium] as int?) == 1;
 
           items.add(ResourceItem(
             id: resId,
@@ -335,6 +336,7 @@ class ResourceLocalDatasource {
             category: ResourceCategoryType.fromString(categoryStr),
             fileSizeBytes: fileSizeBytes,
             fileUrl: filePath,
+            isFreeSample: !isPremiumItem,
             locked: false,
           ));
         }

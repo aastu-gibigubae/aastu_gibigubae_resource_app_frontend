@@ -27,8 +27,16 @@ class User {
     required this.createdAt,
   });
 
-  bool get isPremium =>
-      subscriptionStatus == 'premium' || subscriptionStatus == 'active';
+  bool get isPremium {
+    if (subscriptionStatus != 'premium' && subscriptionStatus != 'active') {
+      return false;
+    }
+    if (subscriptionExpiresAt != null &&
+        DateTime.now().isAfter(subscriptionExpiresAt!)) {
+      return false;
+    }
+    return true;
+  }
   bool get isAdmin => role == 'admin';
   bool get isActivated => activationStatus == 'active';
 

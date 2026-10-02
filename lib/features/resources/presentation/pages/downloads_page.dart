@@ -89,6 +89,10 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   }
 
   void _openPdf(ResourceItem res) {
+    if (res.locked) {
+      _showSubscriptionRequiredDialog(res);
+      return;
+    }
     context.push(
       RouteNames.pdfViewer,
       extra: {
@@ -97,6 +101,77 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         'title': res.title,
         'fileUrl': res.fileUrl,
       },
+    );
+  }
+
+  void _showSubscriptionRequiredDialog(ResourceItem res) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Subscription Required',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your access for "${res.title}" has expired.',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'To view downloaded premium course materials offline, please renew or upgrade your subscription plan.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF64748B),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Dismiss',
+                style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push(RouteNames.premium);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Renew Access',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -222,6 +297,71 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                             ),
                           ],
                         ),
+                        if (allDownloads.any((d) => d.locked)) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.lock_clock_rounded,
+                                  color: Color(0xFFD97706),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Subscription Expired',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF92400E),
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Renew your subscription to open and read premium downloads offline.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      context.push(RouteNames.premium),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'Renew',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                      color: Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -369,23 +509,31 @@ class _OfflineDownloadTile extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // PDF Icon Badge
+                // PDF / Lock Icon Badge
                 Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
+                    color: item.locked
+                        ? const Color(0xFFFEF3C7)
+                        : const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'PDF',
-                      style: TextStyle(
-                        color: Color(0xFFDC2626),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                  child: Center(
+                    child: item.locked
+                        ? const Icon(
+                            Icons.lock_rounded,
+                            color: Color(0xFFD97706),
+                            size: 22,
+                          )
+                        : const Text(
+                            'PDF',
+                            style: TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -399,10 +547,12 @@ class _OfflineDownloadTile extends StatelessWidget {
                         item.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                          color: item.locked
+                              ? const Color(0xFF475569)
+                              : const Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -432,6 +582,18 @@ class _OfflineDownloadTile extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (item.locked) ...[
+                            const Text(' • ',
+                                style: TextStyle(color: Color(0xFF94A3B8))),
+                            const Text(
+                              'Locked',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFD97706),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],

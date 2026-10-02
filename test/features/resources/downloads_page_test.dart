@@ -70,5 +70,50 @@ void main() {
       expect(find.text('Calculus Chapter 1 Summary'), findsOneWidget);
       expect(find.text('Physics Midterm 2024'), findsOneWidget);
     });
+
+    testWidgets(
+        'shows expired banner, locked badge, and dialog when subscription expired',
+        (tester) async {
+      final expiredDownloads = [
+        const ResourceItem(
+          id: 101,
+          title: 'Calculus Chapter 1 Summary',
+          courseName: 'Applied Mathematics I',
+          category: ResourceCategoryType.handouts,
+          fileSizeBytes: 2097152,
+          fileUrl: '/mock/path/res_101.pdf',
+          locked: true,
+          reasonCode: 'premium_required',
+          message: 'Subscription expired. Renew to access.',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            downloadedResourcesProvider
+                .overrideWith((ref) => Future.value(expiredDownloads)),
+          ],
+          child: const MaterialApp(
+            home: DownloadsPage(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Expired banner is visible
+      expect(find.text('Subscription Expired'), findsOneWidget);
+      expect(find.text('Renew'), findsOneWidget);
+      expect(find.text('Locked'), findsOneWidget);
+
+      // Tapping the locked tile opens Subscription Required dialog
+      await tester.tap(find.text('Calculus Chapter 1 Summary'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Subscription Required'), findsOneWidget);
+      expect(find.text('Renew Access'), findsOneWidget);
+      expect(find.text('Dismiss'), findsOneWidget);
+    });
   });
 }
