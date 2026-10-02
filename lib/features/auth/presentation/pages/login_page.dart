@@ -19,6 +19,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _isLoading = false;
@@ -46,6 +49,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -186,10 +191,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               // ── Email ────────────────────────────────────────
               AuthTextField(
                 controller: _emailController,
+                focusNode: _emailFocus,
                 hint: 'Email:',
                 icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _passwordFocus.requestFocus(),
               ),
 
               const SizedBox(height: 16),
@@ -197,10 +204,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               // ── Password ─────────────────────────────────────
               AuthTextField(
                 controller: _passwordController,
+                focusNode: _passwordFocus,
                 hint: 'Password:',
                 icon: Icons.lock_outline,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
                 suffixIcon: AuthPasswordButton(
                   obscure: _obscurePassword,
                   onPressed: () => setState(

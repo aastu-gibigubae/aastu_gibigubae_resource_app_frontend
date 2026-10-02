@@ -24,39 +24,43 @@ class AuthBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          /// WHITE BACKGROUND
-          const ColoredBox(
-            color: Colors.white,
-          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            /// WHITE BACKGROUND
+            const ColoredBox(
+              color: Colors.white,
+            ),
 
-          /// BOTTOM RIGHT OUTLINE (matches Figma image copy 2 and 3)
-          Positioned(
-            right: -285,
-            bottom: -215,
-            child: IgnorePointer(
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AuthColors.outline,
-                    width: 1.2,
+            /// BOTTOM RIGHT OUTLINE (matches Figma image copy 2 and 3)
+            Positioned(
+              right: -285,
+              bottom: -215,
+              child: IgnorePointer(
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AuthColors.outline,
+                      width: 1.2,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          /// SCROLLABLE CONTENT (contains AuthTopCurve at top so text never scrolls over it)
-          child,
-        ],
+            /// SCROLLABLE CONTENT (contains AuthTopCurve at top so text never scrolls over it)
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -144,7 +148,7 @@ class AuthScrollView extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -170,6 +174,9 @@ class AuthTextField extends StatelessWidget {
 
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
+  final ValueChanged<String>? onSubmitted;
+  final EdgeInsets scrollPadding;
 
   const AuthTextField({
     super.key,
@@ -180,6 +187,9 @@ class AuthTextField extends StatelessWidget {
     this.suffixIcon,
     this.keyboardType,
     this.textInputAction,
+    this.focusNode,
+    this.onSubmitted,
+    this.scrollPadding = const EdgeInsets.only(bottom: 120),
   });
 
   @override
@@ -197,6 +207,9 @@ class AuthTextField extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
+        onSubmitted: onSubmitted,
+        scrollPadding: scrollPadding,
         obscureText: obscureText,
         keyboardType: keyboardType,
         textInputAction: textInputAction,

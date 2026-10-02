@@ -21,6 +21,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
 
+  final _nameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _isLoading = false;
@@ -39,6 +44,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _phoneController.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _phoneFocus.dispose();
     super.dispose();
   }
 
@@ -198,9 +207,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Name ─────────────────────────────────────────────
               AuthTextField(
                 controller: _nameController,
+                focusNode: _nameFocus,
                 hint: 'Name:',
                 icon: Icons.person_outline,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _emailFocus.requestFocus(),
               ),
 
               const SizedBox(height: 16),
@@ -208,10 +219,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Email ─────────────────────────────────────────────
               AuthTextField(
                 controller: _emailController,
+                focusNode: _emailFocus,
                 hint: 'Email:',
                 icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _passwordFocus.requestFocus(),
               ),
 
               const SizedBox(height: 16),
@@ -219,10 +232,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Password ─────────────────────────────────────────
               AuthTextField(
                 controller: _passwordController,
+                focusNode: _passwordFocus,
                 hint: 'Password:',
                 icon: Icons.lock_outline,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _phoneFocus.requestFocus(),
                 suffixIcon: AuthPasswordButton(
                   obscure: _obscurePassword,
                   onPressed: () => setState(
@@ -235,10 +250,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Phone ─────────────────────────────────────────────
               AuthTextField(
                 controller: _phoneController,
+                focusNode: _phoneFocus,
                 hint: 'Phone Number:',
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _signUp(),
               ),
 
               const SizedBox(height: 20),
