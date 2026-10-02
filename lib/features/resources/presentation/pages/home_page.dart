@@ -55,7 +55,20 @@ class HomePage extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () => context.push(RouteNames.downloads),
+                      onTap: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Syncing with backend...'),
+                            duration: Duration(milliseconds: 1200),
+                            backgroundColor: Color(0xFF1E3A8A),
+                          ),
+                        );
+                        ref.invalidate(streamsProvider);
+                        ref.invalidate(notificationsProvider);
+                        ref.invalidate(downloadedResourcesProvider);
+                        ref.invalidate(coursesProvider(const CoursesParams()));
+                        await ref.read(streamsProvider.future);
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -63,7 +76,7 @@ class HomePage extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.download_for_offline_rounded,
+                          Icons.refresh_rounded,
                           color: Colors.white,
                           size: 22,
                         ),
