@@ -40,8 +40,9 @@ class SyncService {
   /// Refreshes all active resource feeds and synchronizes with local storage.
   Future<void> syncAll() async {
     try {
-      // Re-fetch streams & departments
+      // Re-fetch streams & departments & courses
       _ref.invalidate(streamsProvider);
+      _ref.invalidate(coursesProvider(const CoursesParams()));
 
       // Re-fetch notifications
       _ref.invalidate(notificationsProvider);
