@@ -81,6 +81,7 @@ class _CategoryResourcesPageState
         },
       );
       ref.invalidate(isResourceDownloadedProvider(resource.id));
+      ref.invalidate(downloadedResourceIdsProvider);
       if (mounted) {
         await showDownloadSuccessDialog(context);
       }

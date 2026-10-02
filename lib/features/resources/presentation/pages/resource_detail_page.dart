@@ -10,7 +10,7 @@ import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../widgets/download_success_dialog.dart';
 
-class ResourceDetailPage extends ConsumerWidget {
+class ResourceDetailPage extends ConsumerStatefulWidget {
   final ResourceItem? resource;
   final int resourceId;
 
@@ -20,11 +20,16 @@ class ResourceDetailPage extends ConsumerWidget {
     this.resourceId = 0,
   });
 
-  Future<void> _handleDownload(
-    BuildContext context,
-    WidgetRef ref,
-    ResourceItem res,
-  ) async {
+  @override
+  ConsumerState<ResourceDetailPage> createState() => _ResourceDetailPageState();
+}
+
+class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
+  bool _isActionLoading = false;
+
+  Future<void> _handleDownload(ResourceItem res) async {
+    if (_isActionLoading) return;
+    setState(() => _isActionLoading = true);
     try {
       final downloadService = ref.read(resourceDownloadServiceProvider);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -35,23 +40,92 @@ class ResourceDetailPage extends ConsumerWidget {
       );
       await downloadService.downloadResource(res);
       ref.invalidate(isResourceDownloadedProvider(res.id));
-      if (context.mounted) {
+      ref.invalidate(downloadedResourceIdsProvider);
+      if (mounted) {
         await showDownloadSuccessDialog(context);
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Download failed: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleDelete(ResourceItem res) async {
+    if (_isActionLoading) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Resource',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'Are you sure you want to remove this downloaded file from your device?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Color(0xFFDC2626),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      final downloadService = ref.read(resourceDownloadServiceProvider);
+      await downloadService.deleteDownload(res.id);
+      ref.invalidate(isResourceDownloadedProvider(res.id));
+      ref.invalidate(downloadedResourceIdsProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloaded resource deleted.'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF334155),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete download: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
       }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final res = resource ??
-        (resourceId > 0
-            ? const MockResourceDatasource().getResourceById(resourceId)
+  Widget build(BuildContext context) {
+    final res = widget.resource ??
+        (widget.resourceId > 0
+            ? const MockResourceDatasource().getResourceById(widget.resourceId)
             : null);
 
     if (res == null) {
@@ -366,39 +440,60 @@ class ResourceDetailPage extends ConsumerWidget {
 
                       const SizedBox(height: 14),
 
-                      // Download PDF button (Gold/Amber or Green if Downloaded)
+                      // Download PDF or Delete button
                       SizedBox(
                         width: double.infinity,
                         height: 52,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _handleDownload(context, ref, res),
-                          icon: Icon(
-                            isDownloaded
-                                ? Icons.check_circle_outline_rounded
-                                : Icons.download_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          label: Text(
-                            isDownloaded
-                                ? 'Downloaded in App (Offline Ready)'
-                                : 'Download PDF',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
-                              color: Colors.white,
-                            ),
-                          ),
+                        child: ElevatedButton(
+                          onPressed: _isActionLoading
+                              ? null
+                              : (isDownloaded
+                                  ? () => _handleDelete(res)
+                                  : () => _handleDownload(res)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isDownloaded
-                                ? const Color(0xFF16A34A)
+                                ? const Color(0xFFDC2626)
                                 : AppColors.secondary,
+                            disabledBackgroundColor: (isDownloaded
+                                    ? const Color(0xFFDC2626)
+                                    : AppColors.secondary)
+                                .withAlpha(160),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
+                          child: _isActionLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      isDownloaded
+                                          ? Icons.delete_outline_rounded
+                                          : Icons.download_rounded,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isDownloaded ? 'Delete' : 'Download PDF',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ],
@@ -411,7 +506,7 @@ class ResourceDetailPage extends ConsumerWidget {
               // Report problem link
               Center(
                 child: TextButton.icon(
-                  onPressed: () => _showReportDialog(context, ref, res.id),
+                  onPressed: () => _showReportDialog(context, res.id),
                   icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.grey),
                   label: const Text(
                     'Report a problem with this resource',
@@ -468,7 +563,6 @@ class ResourceDetailPage extends ConsumerWidget {
 
   Future<void> _showReportDialog(
     BuildContext context,
-    WidgetRef ref,
     int resourceId,
   ) async {
     String selectedReason = 'broken_file';
