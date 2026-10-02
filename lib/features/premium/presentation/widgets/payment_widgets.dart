@@ -200,22 +200,28 @@ class PaymentFeeCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  period,
-                  style: const TextStyle(
-                    color: AppColors.secondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    period,
+                    style: const TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          const Row(
-            children: [
+          const SizedBox(height: 8),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: const [
               Text(
                 'Valid for 12 months from approval',
                 style: TextStyle(
@@ -224,13 +230,11 @@ class PaymentFeeCard extends ConsumerWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(width: 8),
               Icon(
                 Icons.circle,
                 color: AppColors.secondary,
-                size: 6,
+                size: 5,
               ),
-              SizedBox(width: 8),
               Text(
                 'Full Access',
                 style: TextStyle(
@@ -299,27 +303,29 @@ class PaymentBankCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Account Number',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Account Number',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  Text(
-                    acc.accountNumber,
-                    style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                    Text(
+                      acc.accountNumber,
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               IconButton(
                 icon:
@@ -348,12 +354,15 @@ class PaymentBankCard extends ConsumerWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              Text(
-                acc.accountName,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF1E293B),
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  acc.accountName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
