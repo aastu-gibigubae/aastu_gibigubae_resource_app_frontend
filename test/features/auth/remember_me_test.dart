@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aastu_gibigubae_resource_app_frontend/app/providers/app_providers.dart';
 import 'package:aastu_gibigubae_resource_app_frontend/core/constants/storage_keys.dart';
 import 'package:aastu_gibigubae_resource_app_frontend/features/auth/presentation/pages/login_page.dart';
+import 'package:aastu_gibigubae_resource_app_frontend/features/auth/presentation/widgets/auth_widgets.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('student@aastu.edu.et'), findsNothing);
+    });
+
+    testWidgets('AuthButton shows CircularProgressIndicator when isLoading is true',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AuthButton(
+              text: 'Log In',
+              isLoading: true,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Log In'), findsNothing);
     });
   });
 }

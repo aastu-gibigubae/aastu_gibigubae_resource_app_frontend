@@ -227,12 +227,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               // ── Login button ─────────────────────────────────
               Center(
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : AuthButton(
-                        text: 'Log In',
-                        onPressed: _login,
-                      ),
+                child: AuthButton(
+                  text: 'Log In',
+                  isLoading: _isLoading,
+                  onPressed: _login,
+                ),
               ),
 
               const SizedBox(height: 20),

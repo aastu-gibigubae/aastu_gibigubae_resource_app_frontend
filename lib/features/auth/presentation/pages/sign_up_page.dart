@@ -259,25 +259,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
               // ── Sign up button ────────────────────────────────────
               Center(
-                child: _isLoading
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Connecting to server (waking up)…',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      )
-                    : AuthButton(
-                        text: 'Sign Up',
-                        onPressed: _signUp,
-                      ),
+                child: AuthButton(
+                  text: 'Sign Up',
+                  isLoading: _isLoading,
+                  onPressed: _signUp,
+                ),
               ),
 
               const SizedBox(height: 20),
