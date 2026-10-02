@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/errors/error_mapper.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
 import '../../domain/entities/resource_category_type.dart';
 import '../../domain/entities/resource_item.dart';
@@ -50,6 +50,11 @@ class _CategoryResourcesPageState
     setState(() {
       _localFilter = query.trim().toLowerCase();
     });
+  }
+
+  void _onBack() {
+    _searchFocusNode.unfocus();
+    context.pop();
   }
 
   Future<void> _downloadResource(ResourceItem resource) async {
@@ -124,123 +129,322 @@ class _CategoryResourcesPageState
       return match.isNotEmpty ? match.first.name : 'Course';
     });
 
+    final topPadding = MediaQuery.of(context).padding.top;
+    final resolvedCourseTitle = courseName.valueOrNull ?? 'Course';
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _searchFocusNode.unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: Column(
-          children: [
-            CurvedHeader(
-              showBackButton: true,
-              onBack: () {
-                _searchFocusNode.unfocus();
-                context.pop();
-              },
-              title: courseName.valueOrNull ?? 'Course',
-              subtitle: widget.category.label,
-              subtitleColor: ResourceUiConstants.accentGold,
-              bottomChild: SearchPillBar(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                onChanged: _onSearchChanged,
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ── COLLAPSIBLE HEADER ────────────────────────────────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _CategoryResourcesAppBarDelegate(
+                topPadding: topPadding,
+                courseTitle: resolvedCourseTitle,
+                categoryLabel: widget.category.label,
+                onBack: _onBack,
+                searchController: _searchController,
+                searchFocusNode: _searchFocusNode,
+                onSearchChanged: _onSearchChanged,
               ),
             ),
-            Expanded(
-              child: resourcesAsync.when(
-                data: (result) {
-                  List<ResourceItem> resources = result.resources;
-                  if (_localFilter.isNotEmpty) {
-                    resources = resources
-                        .where((r) => r.title
-                            .toLowerCase()
-                            .contains(_localFilter))
-                        .toList();
-                  }
 
-                  if (resources.isEmpty) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'No resources found for this category.',
-                          style: TextStyle(
-                              color: Colors.grey, fontSize: 15),
+            // ── RESOURCES LIST ────────────────────────────────────
+            ...resourcesAsync.when(
+              data: (result) {
+                List<ResourceItem> resources = result.resources;
+                if (_localFilter.isNotEmpty) {
+                  resources = resources
+                      .where((r) => r.title
+                          .toLowerCase()
+                          .contains(_localFilter))
+                      .toList();
+                }
+
+                if (resources.isEmpty) {
+                  return [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            _localFilter.isNotEmpty
+                                ? 'No resources matching "$_localFilter"'
+                                : 'No resources found for this category.',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 15),
+                          ),
                         ),
                       ),
-                    );
-                  }
+                    ),
+                  ];
+                }
 
-                  return ListView.builder(
+                return [
+                  SliverPadding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 20),
-                    itemCount: resources.length,
-                    itemBuilder: (context, index) {
-                      final resource = resources[index];
-                      final isDownloaded = ref
-                              .watch(isResourceDownloadedProvider(
-                                  resource.id))
-                              .valueOrNull ??
-                          false;
-                      final isDownloading =
-                          _downloadingIds.contains(resource.id);
-                      final progress =
-                          _downloadProgressMap[resource.id] ?? 0;
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final resource = resources[index];
+                          final isDownloaded = ref
+                                  .watch(isResourceDownloadedProvider(
+                                      resource.id))
+                                  .valueOrNull ??
+                              false;
+                          final isDownloading =
+                              _downloadingIds.contains(resource.id);
+                          final progress =
+                              _downloadProgressMap[resource.id] ?? 0;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ResourceItemCard(
-                          resource: resource,
-                          isDownloaded: isDownloaded,
-                          isDownloading: isDownloading,
-                          downloadProgress: progress,
-                          onTap: () {
-                            _searchFocusNode.unfocus();
-                            context.push(
-                              RouteNames.resourceDetail,
-                              extra: resource,
-                            );
-                          },
-                          onDownload: resource.locked || isDownloaded
-                              ? null
-                              : () => _downloadResource(resource),
-                        ),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ResourceItemCard(
+                              resource: resource,
+                              isDownloaded: isDownloaded,
+                              isDownloading: isDownloading,
+                              downloadProgress: progress,
+                              onTap: () {
+                                _searchFocusNode.unfocus();
+                                context.push(
+                                  RouteNames.resourceDetail,
+                                  extra: resource,
+                                );
+                              },
+                              onDownload: resource.locked || isDownloaded
+                                  ? null
+                                  : () => _downloadResource(resource),
+                            ),
+                          );
+                        },
+                        childCount: resources.length,
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              loading: () => [
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
-                error: (err, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            size: 48, color: Colors.redAccent),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Could not load resources.\n${ErrorMapper.userMessage(err)}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => ref.invalidate(
-                              courseResourcesProvider(params)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+              ],
+              error: (err, _) => [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              size: 48, color: Colors.redAccent),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Could not load resources.\n${ErrorMapper.userMessage(err)}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => ref.invalidate(
+                                courseResourcesProvider(params)),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// ===============================================================
+/// COLLAPSIBLE APP BAR DELEGATE FOR CATEGORY RESOURCES SCREEN
+/// ===============================================================
+
+class _CategoryResourcesAppBarDelegate
+    extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final String courseTitle;
+  final String categoryLabel;
+  final VoidCallback onBack;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final ValueChanged<String> onSearchChanged;
+
+  _CategoryResourcesAppBarDelegate({
+    required this.topPadding,
+    required this.courseTitle,
+    required this.categoryLabel,
+    required this.onBack,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.onSearchChanged,
+  });
+
+  @override
+  double get minExtent => topPadding + kToolbarHeight;
+
+  @override
+  double get maxExtent => topPadding + 215.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
+
+    final collapsedOpacity = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
+    final expandedOpacity = (1.0 - progress * 1.55).clamp(0.0, 1.0);
+    final cornerRadius = (1.0 - progress) * 32.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(cornerRadius),
+          bottomRight: Radius.circular(cornerRadius),
+        ),
+        boxShadow: progress > 0.8
+            ? [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── EXPANDED VIEW (Course Title, Category, Search bar) ───
+          if (expandedOpacity > 0.0)
+            Positioned(
+              top: topPadding + 44,
+              left: 20,
+              right: 20,
+              bottom: 18,
+              child: Opacity(
+                opacity: expandedOpacity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      courseTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      categoryLabel,
+                      style: const TextStyle(
+                        color: ResourceUiConstants.accentGold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SearchPillBar(
+                      controller: searchController,
+                      focusNode: searchFocusNode,
+                      onChanged: onSearchChanged,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── COMPACT TOP APPBAR (Pinned: Back icon + Course & Category) ───
+          Positioned(
+            top: topPadding,
+            left: 8,
+            right: 16,
+            height: kToolbarHeight,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: onBack,
+                ),
+                const SizedBox(width: 4),
+                if (collapsedOpacity > 0.0)
+                  Expanded(
+                    child: Opacity(
+                      opacity: collapsedOpacity,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            courseTitle,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            categoryLabel,
+                            style: const TextStyle(
+                              color: ResourceUiConstants.accentGold,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(
+      covariant _CategoryResourcesAppBarDelegate oldDelegate) {
+    return oldDelegate.topPadding != topPadding ||
+        oldDelegate.courseTitle != courseTitle ||
+        oldDelegate.categoryLabel != categoryLabel ||
+        oldDelegate.searchController != searchController;
   }
 }
