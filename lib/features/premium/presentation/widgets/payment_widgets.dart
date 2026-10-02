@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/url_launcher_helper.dart';
 import '../../providers/premium_provider.dart';
 
 /// ===============================================================
@@ -567,7 +567,7 @@ class PaymentReviewSteps extends StatelessWidget {
 /// REVIEW STATUS CARD
 /// ===============================================================
 
-class PaymentStatusCard extends StatelessWidget {
+class PaymentStatusCard extends ConsumerWidget {
   final VoidCallback? onCheckStatus;
   final bool isLoading;
 
@@ -578,7 +578,10 @@ class PaymentStatusCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instructions = ref.watch(premiumInstructionsProvider).valueOrNull;
+    final handle = instructions?.telegramHandle ?? '@gibigubae_admin';
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       decoration: BoxDecoration(
@@ -639,21 +642,19 @@ class PaymentStatusCard extends StatelessWidget {
           const SizedBox(height: 12),
           InkWell(
             borderRadius: BorderRadius.circular(18),
-            onTap: () async {
-              final uri = Uri.parse('https://t.me/gibigubae_admin');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
+            onTap: () => UrlLauncherHelper.launchTelegram(
+              context,
+              handle: handle,
+            ),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: const Color(0xFFDCE0E8),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 20,
                     backgroundColor: Color(0xFF28A9E0),
                     child: Icon(
@@ -662,12 +663,12 @@ class PaymentStatusCard extends StatelessWidget {
                       size: 18,
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'For questions or verification, contact our admin '
-                      'on Telegram @gibigubae_admin',
-                      style: TextStyle(
+                      'on Telegram $handle',
+                      style: const TextStyle(
                         color: Color(0xFF38557F),
                         fontSize: 12,
                         height: 1.3,

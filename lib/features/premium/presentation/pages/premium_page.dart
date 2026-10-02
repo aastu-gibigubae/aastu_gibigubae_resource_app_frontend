@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/storage_keys.dart';
+import '../../../../core/utils/url_launcher_helper.dart';
 import '../../../../core/widgets/branding_widgets.dart';
 import '../../providers/premium_provider.dart';
 import '../widgets/payment_widgets.dart';
@@ -196,15 +196,10 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
                 const SizedBox(height: 12),
 
                 InkWell(
-                  onTap: () async {
-                    final url = instructions?.telegramUrl ??
-                        'https://t.me/gibigubae_admin';
-                    final uri = Uri.parse(url);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
+                  onTap: () => UrlLauncherHelper.launchTelegram(
+                    context,
+                    handle: instructions?.telegramHandle ?? '@gibigubae_admin',
+                  ),
                   borderRadius: BorderRadius.circular(28),
                   child: Container(
                     width: 300,
