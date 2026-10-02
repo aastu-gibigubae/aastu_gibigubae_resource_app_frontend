@@ -16,6 +16,7 @@ import '../widgets/stream_card.dart';
 import '../../providers/resource_providers.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/session_provider.dart';
+import '../../../notifications/providers/notification_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -34,27 +35,58 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with greeting, status, search bar
-            CurvedHeader(
-              trailing: GestureDetector(
-                onTap: () => context.push(RouteNames.notifications),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(30),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.notifications_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () async {
+          ref.invalidate(streamsProvider);
+          ref.invalidate(notificationsProvider);
+          ref.invalidate(downloadedResourcesProvider);
+          ref.invalidate(coursesProvider(const CoursesParams()));
+          await ref.read(streamsProvider.future);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with greeting, status, search bar
+              CurvedHeader(
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => context.push(RouteNames.downloads),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(30),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.download_for_offline_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => context.push(RouteNames.notifications),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(30),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.notifications_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
               titleWidget: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -304,7 +336,8 @@ class HomePage extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   void _showCoursePickerForCategory(

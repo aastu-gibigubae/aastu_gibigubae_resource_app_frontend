@@ -137,8 +137,14 @@ class _CategoryResourcesPageState
       onTap: () => _searchFocusNode.unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+        body: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(courseResourcesProvider(params));
+            await ref.read(courseResourcesProvider(params).future);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // ── COLLAPSIBLE HEADER ────────────────────────────────
             SliverPersistentHeader(
@@ -271,8 +277,9 @@ class _CategoryResourcesPageState
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// ===============================================================

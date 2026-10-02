@@ -15,7 +15,7 @@ class LocalDatabase {
   LocalDatabase._();
 
   static const String _dbName = 'aastu_freshman.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   static Database? _db;
 
@@ -43,13 +43,83 @@ class LocalDatabase {
   static Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE ${StorageKeys.cachedResourcesTable} (
-        ${StorageKeys.colId}         INTEGER PRIMARY KEY AUTOINCREMENT,
-        ${StorageKeys.colResourceId} TEXT    NOT NULL UNIQUE,
-        ${StorageKeys.colFilePath}   TEXT    NOT NULL,
-        ${StorageKeys.colChecksum}   TEXT,
-        ${StorageKeys.colUpdatedAt}  TEXT,
-        ${StorageKeys.colCachedAt}   TEXT    NOT NULL,
-        ${StorageKeys.colIsPremium}  INTEGER NOT NULL DEFAULT 0
+        ${StorageKeys.colId}            INTEGER PRIMARY KEY AUTOINCREMENT,
+        ${StorageKeys.colResourceId}    TEXT    NOT NULL UNIQUE,
+        ${StorageKeys.colFilePath}      TEXT    NOT NULL,
+        ${StorageKeys.colChecksum}      TEXT,
+        ${StorageKeys.colUpdatedAt}     TEXT,
+        ${StorageKeys.colCachedAt}      TEXT    NOT NULL,
+        ${StorageKeys.colIsPremium}     INTEGER NOT NULL DEFAULT 0,
+        ${StorageKeys.colTitle}         TEXT,
+        ${StorageKeys.colCategory}      TEXT,
+        ${StorageKeys.colCourseName}    TEXT,
+        ${StorageKeys.colFileSizeBytes} INTEGER
+      )
+    ''');
+
+    await _createCacheTables(db);
+  }
+
+  static Future<void> _createCacheTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${StorageKeys.cachedStreamsTable} (
+        ${StorageKeys.colId}       INTEGER PRIMARY KEY,
+        ${StorageKeys.colTitle}    TEXT NOT NULL,
+        ${StorageKeys.colSyncedAt} TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${StorageKeys.cachedDepartmentsTable} (
+        ${StorageKeys.colId}           INTEGER PRIMARY KEY,
+        ${StorageKeys.colStreamId}     INTEGER NOT NULL,
+        ${StorageKeys.colTitle}        TEXT NOT NULL,
+        ${StorageKeys.colSyncedAt}     TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${StorageKeys.cachedCoursesTable} (
+        ${StorageKeys.colId}            INTEGER PRIMARY KEY,
+        ${StorageKeys.colDepartmentId}  INTEGER,
+        ${StorageKeys.colTitle}         TEXT NOT NULL,
+        ${StorageKeys.colAcademicYear}  INTEGER NOT NULL,
+        ${StorageKeys.colStreamId}      INTEGER,
+        ${StorageKeys.colIconKey}       TEXT,
+        ${StorageKeys.colResourceCount} INTEGER DEFAULT 16,
+        ${StorageKeys.colSemesterLabel} TEXT,
+        ${StorageKeys.colSyncedAt}      TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${StorageKeys.cachedResourceItemsTable} (
+        ${StorageKeys.colId}            INTEGER PRIMARY KEY,
+        ${StorageKeys.colCourseId}      INTEGER NOT NULL,
+        ${StorageKeys.colTitle}         TEXT NOT NULL,
+        ${StorageKeys.colDescription}   TEXT,
+        ${StorageKeys.colCategory}      TEXT NOT NULL,
+        ${StorageKeys.colIsFreeSample}  INTEGER NOT NULL DEFAULT 0,
+        ${StorageKeys.colLocked}        INTEGER NOT NULL DEFAULT 0,
+        ${StorageKeys.colMessage}       TEXT,
+        ${StorageKeys.colFileUrl}       TEXT,
+        ${StorageKeys.colFileSizeBytes} INTEGER,
+        ${StorageKeys.colChecksum}      TEXT,
+        ${StorageKeys.colCourseName}    TEXT,
+        ${StorageKeys.colSemesterLabel} TEXT,
+        ${StorageKeys.colAcademicYear}  INTEGER,
+        ${StorageKeys.colSyncedAt}      TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${StorageKeys.cachedNotificationsTable} (
+        ${StorageKeys.colId}         INTEGER PRIMARY KEY,
+        ${StorageKeys.colType}       TEXT,
+        ${StorageKeys.colMessage}    TEXT NOT NULL,
+        ${StorageKeys.colReadStatus} INTEGER NOT NULL DEFAULT 0,
+        ${StorageKeys.colCreatedAt}  TEXT,
+        ${StorageKeys.colSyncedAt}   TEXT NOT NULL
       )
     ''');
   }
@@ -59,7 +129,22 @@ class LocalDatabase {
     int oldVersion,
     int newVersion,
   ) async {
-    // Handle future migrations here.
+    if (oldVersion < 2) {
+      await _createCacheTables(db);
+      // Migrate cached_resources table if columns missing
+      for (final col in [
+        '${StorageKeys.colTitle} TEXT',
+        '${StorageKeys.colCategory} TEXT',
+        '${StorageKeys.colCourseName} TEXT',
+        '${StorageKeys.colFileSizeBytes} INTEGER',
+      ]) {
+        try {
+          await db.execute(
+            'ALTER TABLE ${StorageKeys.cachedResourcesTable} ADD COLUMN $col',
+          );
+        } catch (_) {}
+      }
+    }
   }
 
   // ── Generic helpers ────────────────────────────────────────────

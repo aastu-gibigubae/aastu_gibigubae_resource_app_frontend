@@ -6,6 +6,7 @@ import '../../auth/providers/session_provider.dart';
 import '../../resources/data/models/pagination_model.dart';
 import '../data/datasources/mock_resource_datasource.dart';
 import '../data/datasources/resource_download_service.dart';
+import '../data/datasources/resource_local_datasource.dart';
 import '../data/datasources/resource_remote_datasource.dart';
 import '../data/models/search_result_model.dart';
 import '../domain/entities/course_item.dart';
@@ -13,10 +14,15 @@ import '../domain/entities/resource_category_type.dart';
 import '../domain/entities/resource_item.dart';
 import '../domain/entities/stream_item.dart';
 
-// Datasource provider
+// Datasource providers
 final resourceRemoteDatasourceProvider =
     Provider<ResourceRemoteDatasource>((ref) {
   return ResourceRemoteDatasource(ref.watch(dioProvider));
+});
+
+final resourceLocalDatasourceProvider =
+    Provider<ResourceLocalDatasource>((ref) {
+  return const ResourceLocalDatasource();
 });
 
 // In-app sandbox download service provider
@@ -39,39 +45,62 @@ final downloadedResourceIdsProvider =
   return service.getDownloadedResourceIds();
 });
 
-// Streams provider
-// Streams are a tiny, bounded list (2 items). Mock fallback is acceptable
-// here since these rarely change and the backend may be cold-starting.
+// Returns list of all downloaded resources for offline viewing
+final downloadedResourcesProvider =
+    FutureProvider<List<ResourceItem>>((ref) async {
+  final service = ref.watch(resourceDownloadServiceProvider);
+  return service.getDownloadedResources();
+});
+
+// Streams provider with offline cache support
 final streamsProvider =
     AutoDisposeFutureProvider<List<StreamItem>>((ref) async {
-  final ds = ref.watch(resourceRemoteDatasourceProvider);
+  final remoteDs = ref.watch(resourceRemoteDatasourceProvider);
+  final localDs = ref.watch(resourceLocalDatasourceProvider);
+
   try {
-    final models = await ds.getStreams();
+    final models = await remoteDs.getStreams();
     if (models.isNotEmpty) {
-      return models
+      final streams = models
           .map((m) => StreamItem(id: m.id, name: m.name))
           .toList();
+      await localDs.cacheStreams(streams);
+      return streams;
     }
   } catch (e) {
-    debugPrint('[streamsProvider] Remote fetch failed ($e), using fallback.');
+    debugPrint('[streamsProvider] Remote fetch failed ($e), checking offline cache.');
   }
+
+  // Fallback to offline SQLite cache
+  final cached = await localDs.getCachedStreams();
+  if (cached.isNotEmpty) {
+    return cached;
+  }
+
   return MockResourceDatasource.streams;
 });
 
-// Departments provider — fetches departments for a given stream.
-// Only relevant for Year 2+ where courses are department-specific.
+// Departments provider with offline cache support
 final departmentsProvider =
     AutoDisposeFutureProvider.family<List<({int id, String name})>, int>(
         (ref, streamId) async {
-  final ds = ref.watch(resourceRemoteDatasourceProvider);
+  final remoteDs = ref.watch(resourceRemoteDatasourceProvider);
+  final localDs = ref.watch(resourceLocalDatasourceProvider);
+
   try {
-    final models = await ds.getDepartments(streamId: streamId);
-    return models.map((m) => (id: m.id, name: m.name)).toList();
+    final models = await remoteDs.getDepartments(streamId: streamId);
+    if (models.isNotEmpty) {
+      final depts = models.map((m) => (id: m.id, name: m.name)).toList();
+      await localDs.cacheDepartments(streamId, depts);
+      return depts;
+    }
   } catch (e) {
     debugPrint(
-        '[departmentsProvider] Remote fetch failed ($e), returning empty.');
-    return [];
+        '[departmentsProvider] Remote fetch failed ($e), checking offline cache.');
   }
+
+  final cached = await localDs.getCachedDepartments(streamId);
+  return cached;
 });
 
 // Stream selection filter provider for Browse Courses
@@ -92,7 +121,7 @@ String _resolveCourseIconKey(String name) {
   return 'book';
 }
 
-// Courses provider with optional filters (Defaults to Year 1)
+// Courses provider with optional filters and offline caching
 class CoursesParams {
   final int? streamId;
   final int? departmentId;
@@ -122,15 +151,16 @@ class CoursesParams {
 final coursesProvider = AutoDisposeFutureProvider.family<
     ({List<CourseItem> courses, PaginationModel pagination}),
     CoursesParams>((ref, params) async {
-  final ds = ref.watch(resourceRemoteDatasourceProvider);
+  final remoteDs = ref.watch(resourceRemoteDatasourceProvider);
+  final localDs = ref.watch(resourceLocalDatasourceProvider);
+
   try {
-    final result = await ds.getCourses(
+    final result = await remoteDs.getCourses(
       streamId: params.streamId,
       departmentId: params.departmentId,
       year: params.year,
       page: params.page,
     );
-    // If backend returns courses, map and return them
     if (result.courses.isNotEmpty) {
       final courses = result.courses
           .map((m) => CourseItem(
@@ -143,10 +173,29 @@ final coursesProvider = AutoDisposeFutureProvider.family<
                 semesterLabel: 'Semester 1',
               ))
           .toList();
+      await localDs.cacheCourses(courses);
       return (courses: courses, pagination: result.pagination);
     }
   } catch (e) {
-    debugPrint('[coursesProvider] Remote fetch failed ($e), using fallback.');
+    debugPrint('[coursesProvider] Remote fetch failed ($e), checking offline cache.');
+  }
+
+  // Check offline SQLite cache
+  final cached = await localDs.getCachedCourses(
+    streamId: params.streamId,
+    departmentId: params.departmentId,
+    year: params.year,
+  );
+  if (cached.isNotEmpty) {
+    return (
+      courses: cached,
+      pagination: PaginationModel(
+        page: params.page,
+        limit: 20,
+        total: cached.length,
+        totalPages: 1,
+      ),
+    );
   }
 
   // Graceful fallback when backend database is not yet seeded or offline
@@ -172,7 +221,7 @@ final coursesProvider = AutoDisposeFutureProvider.family<
   );
 });
 
-// Course resources provider
+// Course resources provider with offline caching
 class CourseResourcesParams {
   final int courseId;
   final ResourceCategoryType category;
@@ -200,16 +249,15 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
     ({List<ResourceItem> resources, PaginationModel pagination}),
     CourseResourcesParams>((ref, params) async {
   final isPremium = await ref.watch(isPremiumProvider.future);
-  final ds = ref.watch(resourceRemoteDatasourceProvider);
+  final remoteDs = ref.watch(resourceRemoteDatasourceProvider);
+  final localDs = ref.watch(resourceLocalDatasourceProvider);
+
   try {
-    final result = await ds.getCourseResources(
+    final result = await remoteDs.getCourseResources(
       courseId: params.courseId,
       category: params.category.apiValue,
       page: params.page,
     );
-    // Accept the API result even if empty — empty means no resources exist
-    // for this (course, category) pair yet. The UI should show "No resources"
-    // instead of fake mock data.
     final resources = result.resources
         .map((m) => ResourceItem(
               id: m.id,
@@ -226,13 +274,37 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
               checksum: m.checksum,
             ))
         .toList();
+
+    // Cache into local database for offline browsing
+    await localDs.cacheResources(
+      params.courseId,
+      params.category.apiValue,
+      resources,
+    );
     return (resources: resources, pagination: result.pagination);
   } catch (e) {
     debugPrint(
-        '[courseResourcesProvider] Remote fetch failed ($e), using fallback.');
+        '[courseResourcesProvider] Remote fetch failed ($e), checking offline cache.');
   }
 
-  // Mock fallback only on network/parse error — never on empty API results.
+  // Check offline SQLite cache
+  final cached = await localDs.getCachedResources(
+    courseId: params.courseId,
+    category: params.category.apiValue,
+  );
+  if (cached.isNotEmpty) {
+    return (
+      resources: cached,
+      pagination: PaginationModel(
+        page: params.page,
+        limit: 20,
+        total: cached.length,
+        totalPages: 1,
+      ),
+    );
+  }
+
+  // Mock fallback only on error when no offline cache exists
   final rawFallback = const MockResourceDatasource()
       .getCategoryResources(courseId: params.courseId, category: params.category);
   final fallbackList = rawFallback.map((item) {

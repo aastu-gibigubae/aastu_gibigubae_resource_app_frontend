@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/sync/sync_service.dart';
 import '../../core/widgets/full_screen_loading_overlay.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/device/providers/device_status_provider.dart';
@@ -45,6 +46,7 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(syncServiceProvider);
     final deviceAsync = ref.watch(deviceStatusProvider);
 
     final shell = Scaffold(

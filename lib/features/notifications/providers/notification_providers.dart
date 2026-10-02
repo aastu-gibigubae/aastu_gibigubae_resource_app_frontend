@@ -3,26 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/app_providers.dart';
 import '../../../core/errors/error_mapper.dart';
+import '../data/datasources/notification_local_datasource.dart';
 import '../data/datasources/notification_remote_datasource.dart';
 import '../domain/entities/notification_item.dart';
 
-// Datasource provider
+// Datasource providers
 final notificationRemoteDatasourceProvider =
     Provider<NotificationRemoteDatasource>((ref) {
   return NotificationRemoteDatasource(ref.watch(dioProvider));
 });
 
-// Notifications state notifier
+final notificationLocalDatasourceProvider =
+    Provider<NotificationLocalDatasource>((ref) {
+  return const NotificationLocalDatasource();
+});
+
+// Notifications state notifier with offline caching
 class NotificationsNotifier
     extends AutoDisposeAsyncNotifier<List<NotificationItem>> {
   @override
   Future<List<NotificationItem>> build() => _fetch();
 
   Future<List<NotificationItem>> _fetch() async {
-    final ds = ref.read(notificationRemoteDatasourceProvider);
+    final remoteDs = ref.read(notificationRemoteDatasourceProvider);
+    final localDs = ref.read(notificationLocalDatasourceProvider);
+
     try {
-      final models = await ds.getNotifications();
-      return models
+      final models = await remoteDs.getNotifications();
+      final items = models
           .map((m) => NotificationItem.fromBackend(
                 id: m.id,
                 type: m.type,
@@ -31,16 +39,25 @@ class NotificationsNotifier
                 createdAt: m.createdAt,
               ))
           .toList();
+
+      // Cache for offline viewing
+      await localDs.cacheNotifications(items);
+      return items;
     } catch (_) {
-      return [];
+      // On network failure / offline, read from SQLite cache
+      final cached = await localDs.getCachedNotifications();
+      return cached;
     }
   }
 
   Future<void> markAsRead(int notificationId) async {
-    final ds = ref.read(notificationRemoteDatasourceProvider);
+    final remoteDs = ref.read(notificationRemoteDatasourceProvider);
+    final localDs = ref.read(notificationLocalDatasourceProvider);
+
     try {
-      await ds.markAsRead(notificationId: notificationId);
-      // Refresh the list after marking as read.
+      await remoteDs.markAsRead(notificationId: notificationId);
+      await localDs.markAsRead(notificationId);
+      // Refresh the list after marking as read
       state = await AsyncValue.guard(_fetch);
     } on DioException catch (e) {
       throw ErrorMapper.fromDioException(e);

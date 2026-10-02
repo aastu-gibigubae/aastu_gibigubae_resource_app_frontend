@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/storage/local_database.dart';
+import '../../domain/entities/resource_category_type.dart';
 import '../../domain/entities/resource_item.dart';
 
 class ResourceDownloadService {
@@ -110,7 +111,12 @@ class ResourceDownloadService {
         StorageKeys.colChecksum: resource.checksum ?? '',
         StorageKeys.colCachedAt: DateTime.now().toIso8601String(),
         StorageKeys.colIsPremium: resource.locked ? 1 : 0,
+        StorageKeys.colTitle: resource.title,
+        StorageKeys.colCategory: resource.category.apiValue,
+        StorageKeys.colCourseName: resource.courseName,
+        StorageKeys.colFileSizeBytes: resource.fileSizeBytes,
       },
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
     return targetPath;
@@ -153,6 +159,44 @@ class ResourceDownloadService {
           .toList();
     } catch (e) {
       debugPrint('[ResourceDownloadService] getDownloadedResourceIds error: $e');
+      return [];
+    }
+  }
+
+  /// Returns all downloaded resources with metadata for offline display
+  Future<List<ResourceItem>> getDownloadedResources() async {
+    try {
+      final rows = await LocalDatabase.query(
+        StorageKeys.cachedResourcesTable,
+        orderBy: '${StorageKeys.colCachedAt} DESC',
+      );
+
+      final items = <ResourceItem>[];
+      for (final r in rows) {
+        final filePath = r[StorageKeys.colFilePath] as String?;
+        if (filePath != null && await File(filePath).exists()) {
+          final resId =
+              int.tryParse(r[StorageKeys.colResourceId].toString()) ?? 0;
+          final title = (r[StorageKeys.colTitle] as String?) ?? 'Downloaded Document';
+          final categoryStr =
+              (r[StorageKeys.colCategory] as String?) ?? 'handouts';
+          final courseName = (r[StorageKeys.colCourseName] as String?) ?? '';
+          final fileSizeBytes = (r[StorageKeys.colFileSizeBytes] as int?) ?? 0;
+
+          items.add(ResourceItem(
+            id: resId,
+            title: title,
+            courseName: courseName,
+            category: ResourceCategoryType.fromString(categoryStr),
+            fileSizeBytes: fileSizeBytes,
+            fileUrl: filePath,
+            locked: false,
+          ));
+        }
+      }
+      return items;
+    } catch (e) {
+      debugPrint('[ResourceDownloadService] getDownloadedResources error: $e');
       return [];
     }
   }

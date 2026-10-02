@@ -15,6 +15,7 @@ import '../../features/resources/domain/entities/resource_item.dart';
 import '../../features/resources/presentation/pages/browse_courses_page.dart';
 import '../../features/resources/presentation/pages/category_resources_page.dart';
 import '../../features/resources/presentation/pages/course_categories_page.dart';
+import '../../features/resources/presentation/pages/downloads_page.dart';
 import '../../features/resources/presentation/pages/explore_course_resources_page.dart';
 import '../../features/resources/presentation/pages/home_page.dart';
 import '../../features/resources/presentation/pages/pdf_viewer_page.dart';
@@ -202,10 +203,29 @@ GoRouter createRouter({
               child: PdfViewerPage(resource: state.extra as ResourceItem),
             );
           }
+          if (state.extra is Map<String, dynamic>) {
+            final map = state.extra as Map<String, dynamic>;
+            return MaterialPage(
+              child: PdfViewerPage(
+                resource: map['resource'] as ResourceItem?,
+                title: (map['title'] as String?) ?? 'Document',
+                courseName: (map['courseName'] as String?) ?? 'Course Resource',
+                fileUrl: map['fileUrl'] as String?,
+              ),
+            );
+          }
           return const MaterialPage(
             child: PdfViewerPage(),
           );
         },
+      ),
+
+      GoRoute(
+        path: RouteNames.downloads,
+        name: RouteNames.downloads,
+        pageBuilder: (context, state) => const MaterialPage(
+          child: DownloadsPage(),
+        ),
       ),
 
       GoRoute(

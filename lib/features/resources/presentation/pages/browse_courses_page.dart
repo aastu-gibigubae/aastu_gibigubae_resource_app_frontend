@@ -245,8 +245,15 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
       onTap: () => _searchFocusNode.unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+        body: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(coursesProvider(coursesParams));
+            ref.invalidate(streamsProvider);
+            await ref.read(coursesProvider(coursesParams).future);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // ── COLLAPSIBLE HEADER (Collapses to small app bar with back icon & Browse text) ──
             SliverPersistentHeader(
@@ -466,8 +473,9 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// ===============================================================
