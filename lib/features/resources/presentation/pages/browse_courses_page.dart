@@ -51,6 +51,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     ref.read(searchQueryProvider.notifier).state = '';
     ref.read(selectedStreamFilterProvider.notifier).state = null;
     ref.read(selectedYearFilterProvider.notifier).state = null;
+    ref.read(selectedDepartmentFilterProvider.notifier).state = null;
   }
 
   Widget _buildFilterChips(
@@ -69,6 +70,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
             onSelected: (selected) {
               if (selected) {
                 ref.read(selectedStreamFilterProvider.notifier).state = null;
+                ref.read(selectedDepartmentFilterProvider.notifier).state = null;
               }
             },
             selectedColor: AppColors.primary,
@@ -93,6 +95,9 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                 onSelected: (selected) {
                   ref.read(selectedStreamFilterProvider.notifier).state =
                       selected ? stream.id : null;
+                  // Reset department when stream changes
+                  ref.read(selectedDepartmentFilterProvider.notifier).state =
+                      null;
                 },
                 selectedColor: AppColors.primary,
                 labelStyle: TextStyle(
@@ -124,10 +129,81 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                 onSelected: (selected) {
                   ref.read(selectedYearFilterProvider.notifier).state =
                       selected ? year : null;
+                  // Reset department when year changes
+                  ref.read(selectedDepartmentFilterProvider.notifier).state =
+                      null;
                 },
                 selectedColor: const Color(0xFFD97706),
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : const Color(0xFF374151),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                backgroundColor: const Color(0xFFF3F4F6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDepartmentChips(
+    List<({int id, String name})> departments,
+    int? selectedDepartment,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Icon(Icons.school_outlined,
+                size: 16, color: Color(0xFF6B7280)),
+          ),
+          ChoiceChip(
+            label: const Text('All Departments'),
+            selected: selectedDepartment == null,
+            onSelected: (selected) {
+              if (selected) {
+                ref.read(selectedDepartmentFilterProvider.notifier).state =
+                    null;
+              }
+            },
+            selectedColor: const Color(0xFF7C3AED),
+            labelStyle: TextStyle(
+              color: selectedDepartment == null
+                  ? Colors.white
+                  : const Color(0xFF374151),
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            backgroundColor: const Color(0xFFF3F4F6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ...departments.map((dept) {
+            final isSelected = selectedDepartment == dept.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(dept.name),
+                selected: isSelected,
+                onSelected: (selected) {
+                  ref
+                      .read(selectedDepartmentFilterProvider.notifier)
+                      .state = selected ? dept.id : null;
+                },
+                selectedColor: const Color(0xFF7C3AED),
+                labelStyle: TextStyle(
+                  color:
+                      isSelected ? Colors.white : const Color(0xFF374151),
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -213,10 +289,20 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
   Widget build(BuildContext context) {
     final selectedStream = ref.watch(selectedStreamFilterProvider);
     final selectedYear = ref.watch(selectedYearFilterProvider);
+    final selectedDepartment = ref.watch(selectedDepartmentFilterProvider);
     final streams = ref.watch(streamsProvider).valueOrNull ?? [];
+
+    // Fetch departments when a stream is selected and year >= 2
+    final showDepartments =
+        selectedStream != null && (selectedYear ?? 1) >= 2;
+    final departmentsAsync = showDepartments
+        ? ref.watch(departmentsProvider(selectedStream))
+        : null;
+    final departments = departmentsAsync?.valueOrNull ?? [];
 
     final coursesParams = CoursesParams(
       streamId: selectedStream,
+      departmentId: selectedDepartment,
       year: selectedYear,
     );
     final coursesAsync = ref.watch(coursesProvider(coursesParams));
@@ -247,6 +333,10 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
 
             // Stream and Year Filter Chips
             _buildFilterChips(streams, selectedStream, selectedYear),
+
+            // Department filter (visible when year >= 2 and stream is selected)
+            if (showDepartments && departments.isNotEmpty)
+              _buildDepartmentChips(departments, selectedDepartment),
 
             // Courses and Results List
             Expanded(

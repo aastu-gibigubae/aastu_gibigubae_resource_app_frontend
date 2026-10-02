@@ -58,9 +58,26 @@ final streamsProvider =
   return MockResourceDatasource.streams;
 });
 
-// Stream and Year selection filter providers for Browse Courses
+// Departments provider — fetches departments for a given stream.
+// Only relevant for Year 2+ where courses are department-specific.
+final departmentsProvider =
+    AutoDisposeFutureProvider.family<List<({int id, String name})>, int>(
+        (ref, streamId) async {
+  final ds = ref.watch(resourceRemoteDatasourceProvider);
+  try {
+    final models = await ds.getDepartments(streamId: streamId);
+    return models.map((m) => (id: m.id, name: m.name)).toList();
+  } catch (e) {
+    debugPrint(
+        '[departmentsProvider] Remote fetch failed ($e), returning empty.');
+    return [];
+  }
+});
+
+// Stream, Year, and Department selection filter providers for Browse Courses
 final selectedStreamFilterProvider = StateProvider<int?>((ref) => null);
 final selectedYearFilterProvider = StateProvider<int?>((ref) => null);
+final selectedDepartmentFilterProvider = StateProvider<int?>((ref) => null);
 
 // Courses provider with optional filters
 class CoursesParams {
