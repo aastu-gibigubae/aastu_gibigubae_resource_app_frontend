@@ -248,7 +248,7 @@ class HomePage extends ConsumerWidget {
 
             AppSpacing.gapLg,
 
-            // Recent Activity Section
+            // Recent Activities Section
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: ResourceUiConstants.horizontalPadding,
@@ -256,13 +256,30 @@ class HomePage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Recent Activity',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Activities',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.push(RouteNames.browse),
+                        child: const Text(
+                          ResourceUiConstants.seeAll,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: ResourceUiConstants.textLink,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   ...MockResourceDatasource.recentActivities.map(
