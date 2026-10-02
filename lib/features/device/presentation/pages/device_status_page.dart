@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/providers/app_providers.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/session_provider.dart';
 
@@ -18,170 +16,287 @@ class DeviceStatusPage extends ConsumerWidget {
     final isPremiumAsync = ref.watch(isPremiumProvider);
     final isPremium = user?.isPremium ?? isPremiumAsync.valueOrNull ?? false;
 
-    final fingerprintAsync = ref.watch(
-      FutureProvider<String?>((ref) async {
-        return ref.read(deviceFingerprintServiceProvider).getFingerprint();
-      }),
-    );
-    final rawFp = fingerprintAsync.valueOrNull;
-    final deviceId = (rawFp != null && rawFp.isNotEmpty)
-        ? 'DEV-${rawFp.substring(0, rawFp.length > 8 ? 8 : rawFp.length).toUpperCase()}'
-        : 'DEV-ACTIVE';
+    // Subscription status & expiry
+    final isSubActive = isPremium || user?.subscriptionStatus == 'active';
+    final subscriptionText = isSubActive ? 'Active' : 'Inactive';
+    final subscriptionColor =
+        isSubActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final expires = user?.subscriptionExpiresAt;
+    final expiryText = expires != null
+        ? 'Access ends ${expires.month}/${expires.day}/${expires.year}'
+        : (isSubActive ? 'Access ends Aug 6, 2027' : 'No active access');
 
-    final planLabel = isPremium ? 'Freshman Premium' : 'Free Plan';
-    final statusLabel = user?.isActivated == true
-        ? (isPremium ? 'Active' : 'Basic')
-        : 'Pending';
+    // Device activation status
+    final isDeviceActivated = user?.isActivated ?? true;
+    final deviceText = isDeviceActivated ? 'Activated' : 'Pending Activation';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const CurvedHeader(
-              title: 'Device & Status',
-              subtitle: 'Account & Subscription Verification',
-              subtitleColor: Color(0xFFF59E0B),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border:
-                      Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(6),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Navy Curved Header matching image copy 19.png
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 12,
+                  24,
+                  26,
                 ),
-                child: Column(
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(28),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(
-                      isPremium
-                          ? Icons.verified_user_rounded
-                          : Icons.shield_outlined,
-                      size: 56,
-                      color: isPremium
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFF3B82F6),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      isPremium ? 'Device Activated' : 'Device Registered',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1E3A8A),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      isPremium
-                          ? 'Your device is bound to this account. All downloads and course resources are unlocked.'
-                          : 'Your device is bound to this account on the Free Plan. Upgrade to Premium to unlock downloads and offline access.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildInfoRow('Plan', planLabel),
-                    const Divider(height: 20, color: Color(0xFFF3F4F6)),
-                    _buildInfoRow('Status', statusLabel, isSuccess: isPremium),
-                    const Divider(height: 20, color: Color(0xFFF3F4F6)),
-                    _buildInfoRow('Device ID', deviceId),
-                    const SizedBox(height: 24),
-                    if (!isPremium) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: () => context.push(RouteNames.premium),
-                          icon: const Icon(Icons.star_rounded,
-                              color: Colors.white),
-                          label: const Text(
-                            'Upgrade to Premium',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFD97706),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () {
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
                           context.go(RouteNames.home);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Status',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Explore Course Resources',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
+                          SizedBox(height: 3),
+                          Text(
+                            'Your account and access, in one place',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 28),
+
+              // Subscription Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Subscription',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(6),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isSubActive
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFFE2E8F0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSubActive
+                                  ? Icons.check
+                                  : Icons.lock_outline_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  subscriptionText,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: subscriptionColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  expiryText,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.shield_outlined,
+                            size: 26,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // This device Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'This device',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(6),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Icon(
+                              Icons.phone_android_rounded,
+                              size: 34,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  deviceText,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Last checked today',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Helper note text matching image copy 19.png
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Access is re-checked automatically about once a week. '
+                  "If you're offline for more than 7 days, downloaded files lock until you reconnect.",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.45,
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool isSuccess = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color:
-                isSuccess ? const Color(0xFF10B981) : const Color(0xFF1E3A8A),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -3,450 +3,298 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../auth/providers/auth_provider.dart';
 
-/// ================================================================
-/// PROFILE PAGE
-///
-/// Content only — the bottom nav bar is owned by MainShell.
-/// ================================================================
-
-// ── Design tokens ────────────────────────────────────────────────
-
-const _kBg = Color(0xFFFDF6EE);
-const _kCardBg = Colors.white;
-const _kGold = Color(0xFF8B6914);
-const _kGoldLight = Color(0xFFF5E6C8);
-const _kTitle = Color(0xFF1A1A1A);
-const _kText = Color(0xFF1A1A1A);
-const _kSub = Color(0xFF888888);
-const _kDivider = Color(0xFFEEEEEE);
-const _kLogout = Color(0xFFD94040);
-const _kToggleBg = Color(0xFFCCCCCC);
-
-class ProfilePage extends ConsumerStatefulWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
-  @override
-  ConsumerState<ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends ConsumerState<ProfilePage> {
-  bool _businessMode = false;
-
-  // ── Logout ──────────────────────────────────────────────────────
-
-  Future<void> _logout() async {
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
-        title: const Text('Log Out',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure you want to log out?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Log Out',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text('Are you sure you want to log out of your account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: _kGold)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out',
-                style: TextStyle(color: _kLogout)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
 
-    if (confirm == true && mounted) {
+    if (confirm == true && context.mounted) {
       await ref.read(authProvider.notifier).logout();
-      if (mounted) context.go(RouteNames.login);
+      if (context.mounted) {
+        context.go(RouteNames.login);
+      }
     }
   }
 
-  // ── Build ───────────────────────────────────────────────────────
-
   @override
-  Widget build(BuildContext context) {
-    final userAsync = ref.watch(authProvider);
-    final userName = userAsync.valueOrNull?.name ?? 'Abebe Kebede';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).valueOrNull;
+
+    final userName = (user?.name != null && user!.name.isNotEmpty)
+        ? user.name
+        : 'Abebe Kebede';
+    final userEmail = (user?.email != null && user!.email.isNotEmpty)
+        ? user.email
+        : 'abebekebede@gmail.com';
+    final userPhone = (user?.phone != null && user!.phone!.isNotEmpty)
+        ? user.phone!
+        : '0912345678';
+    const userDept = 'Software Engineering';
+    const userYear = 'Second Year';
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: Column(
-          children: [
-            // ── Title ─────────────────────────────────────────────
-            const _TitleBar(),
-
-            // ── Content ───────────────────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 12),
-                child: Column(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Top Navy Curved Header matching image copy 20.png
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 12,
+                  24,
+                  54,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(28),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _UserCard(userName: userName),
-                    const SizedBox(height: 20),
-                    _BusinessModeRow(
-                      value: _businessMode,
-                      onChanged: (v) =>
-                          setState(() => _businessMode = v),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go(RouteNames.home);
+                        }
+                      },
                     ),
-                    const SizedBox(height: 20),
-                    const _MenuCard(
-                      items: [
-                        _MenuItem(
-                          icon: Icons.favorite_border_rounded,
-                          label: 'Favorite',
-                        ),
-                        _MenuItem(
-                          icon: Icons.notifications_none_rounded,
-                          label: 'Notifications',
-                        ),
-                        _MenuItem(
-                          icon: Icons.info_outline_rounded,
-                          label: 'About',
-                        ),
-                        _MenuItem(
-                          icon: Icons.rate_review_outlined,
-                          label: 'Reviews',
-                        ),
-                        _MenuItem(
-                          icon: Icons.help_outline_rounded,
-                          label: 'Help',
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    _LogoutCard(onTap: _logout),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
-// ── Title bar ─────────────────────────────────────────────────────
+              // Overlapping Avatar and Card Structure
+              Transform.translate(
+                offset: const Offset(0, -40),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      // User Card with integrated top Avatar
+                      Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.topCenter,
+                        children: [
+                          // White Card
+                          Container(
+                            width: double.infinity,
+                            margin: const Offset(0, 48).dx == 0
+                                ? const EdgeInsets.only(top: 48)
+                                : EdgeInsets.zero,
+                            padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(6),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Full Name
+                                Text(
+                                  userName,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // Email
+                                Text(
+                                  userEmail,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
 
-class _TitleBar extends StatelessWidget {
-  const _TitleBar();
+                                const SizedBox(height: 28),
 
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Center(
-        child: Text(
-          'Profile',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
-            color: _kTitle,
-            letterSpacing: -0.3,
-          ),
-        ),
-      ),
-    );
-  }
-}
+                                // Detail row 1: Phone
+                                _buildProfileDetailRow(
+                                  icon: Icons.phone_outlined,
+                                  value: userPhone,
+                                ),
 
-// ── User card ─────────────────────────────────────────────────────
+                                const SizedBox(height: 18),
 
-class _UserCard extends StatelessWidget {
-  final String userName;
-  const _UserCard({required this.userName});
+                                // Detail row 2: Department
+                                _buildProfileDetailRow(
+                                  icon: Icons.school_outlined,
+                                  value: userDept,
+                                ),
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          // ── Avatar with edit badge ───────────────────────────────
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: const Color(0xFFD0C4B0),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/profile_placeholder.png',
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.person,
-                            size: 40, color: Colors.white),
+                                const SizedBox(height: 18),
+
+                                // Detail row 3: Year
+                                _buildProfileDetailRow(
+                                  icon: Icons.calendar_today_outlined,
+                                  value: userYear,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Top Centered Circular Avatar
+                          Positioned(
+                            top: 0,
+                            child: Container(
+                              width: 96,
+                              height: 96,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(10),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.person_outline,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Red Outlined Log Out Button matching image copy 20.png
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _logout(context, ref),
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: Color(0xFFDC2626),
+                            size: 20,
+                          ),
+                          label: const Text(
+                            'Log Out',
+                            style: TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(
+                              color: Color(0xFFDC2626),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: const BoxDecoration(
-                    color: _kGold,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.edit,
-                      color: Colors.white, size: 13),
-                ),
-              ),
+
+              const SizedBox(height: 32),
             ],
           ),
-
-          const SizedBox(width: 16),
-
-          // ── Name / role ─────────────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: _kText,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                const Text(
-                  'Member',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: _kSub,
-                      fontWeight: FontWeight.w400),
-                ),
-                const SizedBox(height: 5),
-                GestureDetector(
-                  onTap: () {
-                    // TODO: navigate to edit profile
-                  },
-                  child: const Text(
-                    'Edit Profile',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _kGold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Business mode row ─────────────────────────────────────────────
-
-class _BusinessModeRow extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _BusinessModeRow({
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: _kGold,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.work_outline_rounded,
-                color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Business Mode',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: _kText),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Switch to business mode',
-                  style: TextStyle(fontSize: 12, color: _kSub),
-                ),
-              ],
-            ),
-          ),
-          Transform.scale(
-            scale: 0.85,
-            child: Switch(
-              value: value,
-              onChanged: onChanged,
-              activeThumbColor: Colors.white,
-              activeTrackColor: _kGold,
-              inactiveThumbColor: Colors.white,
-              inactiveTrackColor: _kToggleBg,
-              trackOutlineColor:
-                  WidgetStateProperty.all(Colors.transparent),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Menu card ─────────────────────────────────────────────────────
-
-class _MenuCard extends StatelessWidget {
-  final List<_MenuItem> items;
-  const _MenuCard({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: List.generate(items.length, (i) {
-          final isLast = i == items.length - 1;
-          return Column(
-            children: [
-              _MenuTile(item: items[i]),
-              if (!isLast)
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: _kDivider,
-                  indent: 64,
-                ),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-}
-
-// ── Menu tile ─────────────────────────────────────────────────────
-
-class _MenuTile extends StatelessWidget {
-  final _MenuItem item;
-  const _MenuTile({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {},
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _kGoldLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(item.icon, color: _kGold, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                item.label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: _kText,
-                ),
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded,
-                color: _kSub, size: 22),
-          ],
         ),
       ),
     );
   }
-}
 
-// ── Menu item data ────────────────────────────────────────────────
-
-class _MenuItem {
-  final IconData icon;
-  final String label;
-  const _MenuItem({required this.icon, required this.label});
-}
-
-// ── Logout card ───────────────────────────────────────────────────
-
-class _LogoutCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _LogoutCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 20, vertical: 18),
-        decoration: BoxDecoration(
-          color: _kCardBg,
-          borderRadius: BorderRadius.circular(16),
+  Widget _buildProfileDetailRow({
+    required IconData icon,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 22,
+          color: const Color(0xFF0F172A),
         ),
-        child: const Row(
-          children: [
-            Icon(Icons.logout_rounded, color: _kLogout, size: 22),
-            SizedBox(width: 14),
-            Text(
-              'Log Out',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: _kLogout,
-              ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
