@@ -25,6 +25,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  void _loadSavedEmail() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final rememberMe = prefs.getBool(StorageKeys.rememberMe) ?? true;
+    _rememberMe = rememberMe;
+    if (rememberMe) {
+      final savedEmail = prefs.getString(StorageKeys.savedEmail);
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        _emailController.text = savedEmail;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -62,13 +80,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _errorMessage = error;
       });
     } else {
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (_rememberMe) {
+        await prefs.setBool(StorageKeys.rememberMe, true);
+        await prefs.setString(StorageKeys.savedEmail, email);
+      } else {
+        await prefs.setBool(StorageKeys.rememberMe, false);
+        await prefs.remove(StorageKeys.savedEmail);
+      }
+
       final user = ref.read(authProvider).valueOrNull;
       final isPremium = user?.isPremium ?? false;
       if (mounted) {
         if (isPremium) {
           context.go(RouteNames.home);
         } else {
-          final prefs = ref.read(sharedPreferencesProvider);
           final selectionCompleted =
               prefs.getBool(StorageKeys.selectionCompleted) ?? false;
           final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;
@@ -201,7 +227,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   // ── Remember me ──────────────────────────────────
                   AuthRememberMe(
                     value: _rememberMe,
-                    onChanged: (v) => setState(() => _rememberMe = v),
+                    onChanged: (v) {
+                      setState(() => _rememberMe = v);
+                      final prefs = ref.read(sharedPreferencesProvider);
+                      prefs.setBool(StorageKeys.rememberMe, v);
+                      if (!v) {
+                        prefs.remove(StorageKeys.savedEmail);
+                      }
+                    },
                   ),
 
                   const SizedBox(height: 44),

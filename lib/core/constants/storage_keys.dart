@@ -23,6 +23,8 @@ class StorageKeys {
   static const String lastHeartbeat = 'last_heartbeat_ts';
   static const String lastVerification = 'last_verification_ts';
   static const String subscriptionStatus = 'subscription_status';
+  static const String rememberMe = 'remember_me';
+  static const String savedEmail = 'saved_email';
 
   // ── SQLite table / column names ───────────────────────────────────
   static const String cachedResourcesTable = 'cached_resources';

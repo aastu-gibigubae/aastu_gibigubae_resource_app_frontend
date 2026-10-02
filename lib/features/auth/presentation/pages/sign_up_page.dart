@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/providers/app_providers.dart';
 import '../../../../app/router/route_names.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -23,6 +25,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   bool _rememberMe = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = ref.read(sharedPreferencesProvider);
+    _rememberMe = prefs.getBool(StorageKeys.rememberMe) ?? true;
+  }
 
   @override
   void dispose() {
@@ -80,6 +89,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         _errorMessage = error;
       });
     } else {
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (_rememberMe) {
+        await prefs.setBool(StorageKeys.rememberMe, true);
+        await prefs.setString(StorageKeys.savedEmail, email);
+      } else {
+        await prefs.setBool(StorageKeys.rememberMe, false);
+        await prefs.remove(StorageKeys.savedEmail);
+      }
+      if (!mounted) return;
       context.go(RouteNames.selection);
     }
   }
@@ -225,10 +243,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
               const SizedBox(height: 42),
 
-              // ── Remember me ──────────────────────────────────────
               AuthRememberMe(
                 value: _rememberMe,
-                onChanged: (v) => setState(() => _rememberMe = v),
+                onChanged: (v) {
+                  setState(() => _rememberMe = v);
+                  final prefs = ref.read(sharedPreferencesProvider);
+                  prefs.setBool(StorageKeys.rememberMe, v);
+                  if (!v) {
+                    prefs.remove(StorageKeys.savedEmail);
+                  }
+                },
               ),
 
               const SizedBox(height: 44),
