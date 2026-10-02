@@ -17,6 +17,7 @@ import '../../features/resources/domain/entities/resource_item.dart';
 import '../../features/resources/presentation/pages/browse_courses_page.dart';
 import '../../features/resources/presentation/pages/category_resources_page.dart';
 import '../../features/resources/presentation/pages/course_categories_page.dart';
+import '../../features/resources/presentation/pages/explore_course_resources_page.dart';
 import '../../features/resources/presentation/pages/home_page.dart';
 import '../../features/resources/presentation/pages/resource_detail_page.dart';
 import '../../features/selection/presentation/pages/selection_page.dart';
@@ -110,6 +111,14 @@ GoRouter createRouter({
         name: RouteNames.selection,
         pageBuilder: (context, state) => const MaterialPage(
           child: SelectionPage(),
+        ),
+      ),
+
+      GoRoute(
+        path: RouteNames.exploreResources,
+        name: RouteNames.exploreResources,
+        pageBuilder: (context, state) => const MaterialPage(
+          child: ExploreCourseResourcesPage(),
         ),
       ),
 

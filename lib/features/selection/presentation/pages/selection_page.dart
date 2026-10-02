@@ -280,9 +280,8 @@ class _SelectionPageState extends State<SelectionPage> {
       debugPrint('Failed to save selection: $e');
     }
 
-    if (!mounted) return;
-    // Navigate to Home / Resource Hub
-    context.go(RouteNames.home);
+    // Navigate to preview / sneak peek screen
+    context.go(RouteNames.exploreResources);
   }
 }
 
