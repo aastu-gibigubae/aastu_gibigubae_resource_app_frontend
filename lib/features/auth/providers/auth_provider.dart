@@ -5,6 +5,7 @@ import '../../../core/constants/mock_config.dart';
 import '../../../core/constants/storage_keys.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../domain/entities/user.dart';
+import 'session_provider.dart';
 
 /// ================================================================
 /// AUTH PROVIDER
@@ -136,6 +137,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     if (kMockAuth) {
       await ref.read(secureStorageProvider).deleteAll();
       state = const AsyncValue.data(null);
+      _invalidateSessionProviders();
       return;
     }
 
@@ -143,7 +145,20 @@ class AuthNotifier extends AsyncNotifier<User?> {
       await ref.read(logoutUseCaseProvider).call();
     } finally {
       state = const AsyncValue.data(null);
+      _invalidateSessionProviders();
     }
+  }
+
+  /// Invalidates all providers that derive state from SecureStorage
+  /// so that no stale isPremium / hasSession values persist after logout.
+  void _invalidateSessionProviders() {
+    ref.invalidateSelf();
+    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+    ref.container.invalidate(hasSessionProvider);
+    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+    ref.container.invalidate(subscriptionStatusProvider);
+    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+    ref.container.invalidate(isPremiumProvider);
   }
 
   // ── Private helpers ────────────────────────────────────────────

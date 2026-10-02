@@ -108,7 +108,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<User?> getCurrentUser() async {
-    final userJson = await _secureStorage.read('cached_user');
+    final userJson = await _secureStorage.read(StorageKeys.cachedUser);
     if (userJson == null) return null;
     try {
       final map = jsonDecode(userJson) as Map<String, dynamic>;
@@ -147,7 +147,7 @@ class AuthRepositoryImpl implements AuthRepository {
       _secureStorage.write(StorageKeys.userId, user.id),
       _secureStorage.write(StorageKeys.subscriptionStatus,
           user.subscriptionStatus),
-      _secureStorage.write('cached_user', jsonEncode(user.toJson())),
+      _secureStorage.write(StorageKeys.cachedUser, jsonEncode(user.toJson())),
     ]);
   }
 }
