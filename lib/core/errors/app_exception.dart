@@ -1,9 +1,9 @@
-/// ================================================================
-/// APP EXCEPTION
-///
-/// Typed exceptions thrown throughout the app before being
-/// mapped to Failure objects by error_mapper.dart.
-/// ================================================================
+// ================================================================
+// APP EXCEPTION
+//
+// Typed exceptions thrown throughout the app before being
+// mapped to Failure objects by error_mapper.dart.
+// ================================================================
 
 /// Base class for all application exceptions.
 abstract class AppException implements Exception {

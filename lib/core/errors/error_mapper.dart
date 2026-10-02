@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app_exception.dart';
 import 'failure.dart';
@@ -152,6 +153,141 @@ class ErrorMapper {
     if (e is CacheException) return CacheFailure(e.message);
     if (e is ValidationException) return ValidationFailure(e.message);
     return UnknownFailure(e.message);
+  }
+
+  // ── Document / PDF Errors ──────────────────────────────────────
+
+  /// Converts document loading, caching, or file resolution errors into a Failure
+  /// without exposing low-level paths, sockets, or platform stack traces.
+  static Failure fromDocumentError(Object error) {
+    debugPrint('[ErrorMapper] Document error: $error');
+
+    if (error is Failure) return error;
+    if (error is DioException) return fromDioException(error);
+    if (error is AppException) return fromAppException(error);
+
+    final str = error.toString().toLowerCase();
+
+    if (str.contains('socketexception') ||
+        str.contains('network is unreachable') ||
+        str.contains('failed host lookup') ||
+        str.contains('connection refused') ||
+        str.contains('connection reset') ||
+        str.contains('handshake') ||
+        str.contains('clientexception')) {
+      return const NetworkFailure(
+        'Unable to connect to download the document. Please check your internet connection.',
+      );
+    }
+
+    if (str.contains('timeoutexception') || str.contains('timed out')) {
+      return const TimeoutFailure(
+        'Connection timed out while loading the document. Please try again.',
+      );
+    }
+
+    if (str.contains('404') || str.contains('not found')) {
+      return const DocumentFailure(
+        'The requested document is not currently available.',
+      );
+    }
+
+    if (str.contains('403') || str.contains('unauthorized')) {
+      return const PremiumRequiredFailure(
+        'This document requires active premium access.',
+      );
+    }
+
+    if (str.contains('filenotfound') ||
+        str.contains('pathnotfound') ||
+        str.contains('no such file')) {
+      return const DocumentFailure(
+        'Document file could not be found on device storage.',
+      );
+    }
+
+    if (str.contains('format') ||
+        str.contains('corrupt') ||
+        str.contains('pdf') ||
+        str.contains('invalid')) {
+      return const DocumentFailure(
+        'Unable to open document. The file may be damaged or in an unsupported format.',
+      );
+    }
+
+    return const DocumentFailure(
+      'Could not load the document. Please try again.',
+    );
+  }
+
+  /// Converts PDFView rendering errors (from onError callback) into a user-friendly Failure.
+  static Failure fromPdfRenderError(Object? error) {
+    debugPrint('[ErrorMapper] PDF render error: $error');
+    if (error == null) {
+      return const DocumentFailure(
+        'Unable to display document. The file may be damaged or in an unsupported format.',
+      );
+    }
+    final str = error.toString().toLowerCase();
+    if (str.contains('password') || str.contains('encrypt')) {
+      return const DocumentFailure(
+        'This document is password protected and cannot be opened.',
+      );
+    }
+    return const DocumentFailure(
+      'Unable to display document. The file may be damaged or in an unsupported format.',
+    );
+  }
+
+  /// Safe, user-facing error message extractor.
+  /// Never leaks stack traces, class names, internal file paths, or sensitive exceptions.
+  static String userMessage(
+    Object error, {
+    String? defaultMessage,
+  }) {
+    debugPrint('[ErrorMapper] userMessage: $error');
+
+    if (error is Failure) return error.message;
+    if (error is DioException) return fromDioException(error).message;
+    if (error is AppException) return fromAppException(error).message;
+
+    final str = error.toString().toLowerCase();
+
+    if (str.contains('socketexception') ||
+        str.contains('failed host lookup') ||
+        str.contains('network is unreachable')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+
+    if (str.contains('timeoutexception') || str.contains('timed out')) {
+      return 'The request timed out. Please try again.';
+    }
+
+    if (str.contains('filesystemexception') ||
+        str.contains('permission denied') ||
+        str.contains('no space left')) {
+      return 'Unable to access device storage. Please check permissions and available space.';
+    }
+
+    if (str.contains('sqliteexception') || str.contains('database')) {
+      return 'Unable to update local app database. Please try again.';
+    }
+
+    if (defaultMessage != null && defaultMessage.isNotEmpty) {
+      return defaultMessage;
+    }
+
+    final cleaned = _cleanMessage(error.toString());
+    if (cleaned.contains(r'\') ||
+        cleaned.contains(r'/') ||
+        cleaned.contains('Exception') ||
+        cleaned.contains('Error:')) {
+      return 'An unexpected error occurred. Please try again.';
+    }
+
+    return cleaned.isNotEmpty
+        ? cleaned
+        : 'An unexpected error occurred. Please try again.';
   }
 
   // ── Generic catch → Failure ───────────────────────────────────

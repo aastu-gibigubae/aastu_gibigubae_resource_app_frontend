@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../widgets/download_success_dialog.dart';
@@ -142,7 +143,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _loadError = 'Failed to load PDF: ${e.toString()}';
+          _loadError = ErrorMapper.fromDocumentError(e).message;
           _isLoading = false;
         });
       }
@@ -177,7 +178,14 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
+          SnackBar(
+            content: Text(
+              ErrorMapper.userMessage(
+                e,
+                defaultMessage: 'Download failed. Please try again.',
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -575,7 +583,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
           onError: (error) {
             if (mounted) {
               setState(() {
-                _loadError = 'PDF render error: $error';
+                _loadError = ErrorMapper.fromPdfRenderError(error).message;
                 _isReady = true; // Remove overlay so error view is shown
               });
             }

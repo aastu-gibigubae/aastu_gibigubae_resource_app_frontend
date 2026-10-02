@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/widgets/category_icons.dart';
 import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_item.dart';
@@ -47,7 +48,14 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
+          SnackBar(
+            content: Text(
+              ErrorMapper.userMessage(
+                e,
+                defaultMessage: 'Download failed. Please try again.',
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -111,7 +119,14 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete download: $e')),
+          SnackBar(
+            content: Text(
+              ErrorMapper.userMessage(
+                e,
+                defaultMessage: 'Failed to delete download. Please try again.',
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -695,7 +710,12 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to submit report: $e'),
+              content: Text(
+                ErrorMapper.userMessage(
+                  e,
+                  defaultMessage: 'Failed to submit report. Please try again later.',
+                ),
+              ),
               backgroundColor: Colors.red,
             ),
           );

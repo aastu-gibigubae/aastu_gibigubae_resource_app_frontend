@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
 import '../../data/models/search_result_model.dart';
@@ -480,7 +481,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                             size: 48, color: Colors.redAccent),
                         const SizedBox(height: 12),
                         Text(
-                          'Could not load courses.\n$err',
+                          'Could not load courses.\n${ErrorMapper.userMessage(err)}',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.grey),
                         ),

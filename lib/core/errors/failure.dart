@@ -1,10 +1,10 @@
-/// ================================================================
-/// FAILURE
-///
-/// Immutable value objects representing domain-layer failures.
-/// Use cases return Either<Failure, T>; UI reads the Failure
-/// message to show user-friendly strings.
-/// ================================================================
+// ================================================================
+// FAILURE
+//
+// Immutable value objects representing domain-layer failures.
+// Use cases return Either<Failure, T>; UI reads the Failure
+// message to show user-friendly strings.
+// ================================================================
 
 abstract class Failure {
   final String message;
@@ -76,6 +76,15 @@ class CacheFailure extends Failure {
 
 class ValidationFailure extends Failure {
   const ValidationFailure([super.message = 'Please check the form fields.']);
+}
+
+// ── Document / PDF ───────────────────────────────────────────────
+
+class DocumentFailure extends Failure {
+  const DocumentFailure([
+    super.message =
+        'Unable to display this document. The file may be damaged or in an unsupported format.',
+  ]);
 }
 
 // ── Unknown ──────────────────────────────────────────────────────

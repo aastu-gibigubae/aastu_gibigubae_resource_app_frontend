@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
 import '../../domain/entities/resource_category_type.dart';
@@ -88,7 +89,14 @@ class _CategoryResourcesPageState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
+          SnackBar(
+            content: Text(
+              ErrorMapper.userMessage(
+                e,
+                defaultMessage: 'Download failed. Please try again.',
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -214,7 +222,7 @@ class _CategoryResourcesPageState
                             size: 48, color: Colors.redAccent),
                         const SizedBox(height: 12),
                         Text(
-                          'Could not load resources.\n$err',
+                          'Could not load resources.\n${ErrorMapper.userMessage(err)}',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.grey),
                         ),

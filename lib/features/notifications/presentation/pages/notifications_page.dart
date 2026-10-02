@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../providers/notification_providers.dart';
 import '../widgets/notification_tile.dart';
@@ -98,7 +99,7 @@ class NotificationsPage extends ConsumerWidget {
                           size: 48, color: Colors.redAccent),
                       const SizedBox(height: 12),
                       Text(
-                        'Could not load notifications.\n$err',
+                        'Could not load notifications.\n${ErrorMapper.userMessage(err)}',
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.grey),
                       ),
