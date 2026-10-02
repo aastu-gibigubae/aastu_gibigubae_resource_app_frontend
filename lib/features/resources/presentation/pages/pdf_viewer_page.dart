@@ -65,9 +65,31 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
 
   // ── Source resolution ──────────────────────────────────────────
 
+  /// Checks if a local file is a real PDF (not a tiny fallback stub).
+  /// Real PDFs are typically at least a few KB.
+  Future<bool> _isValidPdf(String path) async {
+    try {
+      final file = File(path);
+      if (!await file.exists()) return false;
+      final size = await file.length();
+      // A real PDF is at least ~500 bytes; our fallback stubs are ~50 bytes
+      if (size < 500) return false;
+      // Check for PDF magic bytes
+      final bytes = await file.openRead(0, 5).expand((b) => b).toList();
+      return bytes.length >= 4 &&
+          bytes[0] == 0x25 && // %
+          bytes[1] == 0x50 && // P
+          bytes[2] == 0x44 && // D
+          bytes[3] == 0x46;   // F
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Resolves the PDF to a local file path:
-  ///   1. If already downloaded in sandbox → use that.
+  ///   1. If already downloaded in sandbox AND is a valid PDF → use that.
   ///   2. If remote URL → cache/stream with flutter_cache_manager.
+  ///   3. If neither works → show error.
   Future<void> _resolveSource() async {
     final res = widget.resource;
 
@@ -75,7 +97,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
     if (res != null) {
       final service = ref.read(resourceDownloadServiceProvider);
       final localPath = await service.getLocalFilePath(res.id);
-      if (localPath != null && await File(localPath).exists()) {
+      if (localPath != null && await _isValidPdf(localPath)) {
         if (mounted) {
           setState(() {
             _localPath = localPath;
@@ -91,7 +113,8 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
     if (url == null || url.isEmpty || !url.startsWith('http')) {
       if (mounted) {
         setState(() {
-          _loadError = 'No PDF source available for this resource.';
+          _loadError = 'No PDF source available for this resource.\n'
+              'The file may not have been uploaded yet.';
           _isLoading = false;
         });
       }
@@ -100,13 +123,21 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
 
     try {
       // flutter_cache_manager downloads + caches the file.
-      // The cached file is in the app's private cache dir (not public storage).
       final file = await DefaultCacheManager().getSingleFile(url);
-      if (mounted) {
-        setState(() {
-          _localPath = file.path;
-          _isLoading = false;
-        });
+      if (await _isValidPdf(file.path)) {
+        if (mounted) {
+          setState(() {
+            _localPath = file.path;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _loadError = 'The downloaded file is not a valid PDF.';
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -519,6 +550,19 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
           },
           onViewCreated: (controller) {
             _pdfController = controller;
+            // Safety timeout: if onRender never fires within 8s,
+            // hide the overlay and show whatever is rendered (or error).
+            Future.delayed(const Duration(seconds: 8), () {
+              if (mounted && !_isReady) {
+                setState(() {
+                  _isReady = true;
+                  if (_totalPages == 0) {
+                    _loadError = 'PDF could not be rendered. '
+                        'The file may be corrupted or not a valid PDF.';
+                  }
+                });
+              }
+            });
           },
           onPageChanged: (page, total) {
             if (mounted) {
@@ -532,6 +576,7 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
             if (mounted) {
               setState(() {
                 _loadError = 'PDF render error: $error';
+                _isReady = true; // Remove overlay so error view is shown
               });
             }
           },
@@ -540,19 +585,22 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
           },
         ),
 
-        // Initial render overlay
+        // Initial render overlay — shown while PDFView initialises
         if (!_isReady)
-          const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(height: 16),
-                Text(
-                  'Rendering PDF...',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
+          Container(
+            color: const Color(0xFF1A1A2E),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Preparing document...',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

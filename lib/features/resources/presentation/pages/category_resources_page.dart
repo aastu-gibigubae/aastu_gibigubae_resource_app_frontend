@@ -32,6 +32,12 @@ class _CategoryResourcesPageState
   final FocusNode _searchFocusNode = FocusNode();
   String _localFilter = '';
 
+  /// Tracks which resource IDs are currently downloading.
+  final Set<int> _downloadingIds = {};
+
+  /// Tracks per-resource download progress (0..1).
+  final Map<int, double> _downloadProgressMap = {};
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -54,15 +60,26 @@ class _CategoryResourcesPageState
       return;
     }
 
+    // Prevent double-tap
+    if (_downloadingIds.contains(resource.id)) return;
+
+    setState(() {
+      _downloadingIds.add(resource.id);
+      _downloadProgressMap[resource.id] = 0;
+    });
+
     try {
       final downloadService = ref.read(resourceDownloadServiceProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Downloading resource into app storage...'),
-          duration: Duration(seconds: 1),
-        ),
+      await downloadService.downloadResource(
+        resource,
+        onProgress: (received, total) {
+          if (total > 0 && mounted) {
+            setState(() {
+              _downloadProgressMap[resource.id] = received / total;
+            });
+          }
+        },
       );
-      await downloadService.downloadResource(resource);
       ref.invalidate(isResourceDownloadedProvider(resource.id));
       if (mounted) {
         await showDownloadSuccessDialog(context);
@@ -72,6 +89,13 @@ class _CategoryResourcesPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Download failed: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingIds.remove(resource.id);
+          _downloadProgressMap.remove(resource.id);
+        });
       }
     }
   }
@@ -144,10 +168,23 @@ class _CategoryResourcesPageState
                     itemCount: resources.length,
                     itemBuilder: (context, index) {
                       final resource = resources[index];
+                      final isDownloaded = ref
+                              .watch(isResourceDownloadedProvider(
+                                  resource.id))
+                              .valueOrNull ??
+                          false;
+                      final isDownloading =
+                          _downloadingIds.contains(resource.id);
+                      final progress =
+                          _downloadProgressMap[resource.id] ?? 0;
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: ResourceItemCard(
                           resource: resource,
+                          isDownloaded: isDownloaded,
+                          isDownloading: isDownloading,
+                          downloadProgress: progress,
                           onTap: () {
                             _searchFocusNode.unfocus();
                             context.push(
@@ -155,7 +192,7 @@ class _CategoryResourcesPageState
                               extra: resource,
                             );
                           },
-                          onDownload: resource.locked
+                          onDownload: resource.locked || isDownloaded
                               ? null
                               : () => _downloadResource(resource),
                         ),

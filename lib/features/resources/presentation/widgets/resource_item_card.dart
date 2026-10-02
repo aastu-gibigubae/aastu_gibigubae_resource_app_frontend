@@ -7,12 +7,18 @@ class ResourceItemCard extends StatelessWidget {
   final ResourceItem resource;
   final VoidCallback onTap;
   final VoidCallback? onDownload;
+  final bool isDownloading;
+  final double downloadProgress;
+  final bool isDownloaded;
 
   const ResourceItemCard({
     super.key,
     required this.resource,
     required this.onTap,
     this.onDownload,
+    this.isDownloading = false,
+    this.downloadProgress = 0,
+    this.isDownloaded = false,
   });
 
   @override
@@ -76,29 +82,70 @@ class ResourceItemCard extends StatelessWidget {
                 ],
               ),
             ),
-            resource.locked
-                ? Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      color: Color(0xFFD97706),
-                      size: 20,
-                    ),
-                  )
-                : IconButton(
-                    onPressed: onDownload,
-                    icon: const Icon(
-                      Icons.file_download_outlined,
-                      color: ResourceUiConstants.textNavy,
-                      size: 26,
-                    ),
-                  ),
+            _buildTrailingIcon(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTrailingIcon() {
+    // Locked state
+    if (resource.locked) {
+      return Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(
+          Icons.lock_rounded,
+          color: Color(0xFFD97706),
+          size: 20,
+        ),
+      );
+    }
+
+    // Downloaded state — show green checkmark
+    if (isDownloaded) {
+      return Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.check_circle_rounded,
+          color: Color(0xFF16A34A),
+          size: 26,
+        ),
+      );
+    }
+
+    // Downloading state — show circular progress on top of download icon
+    if (isDownloading) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              value: downloadProgress > 0 ? downloadProgress : null,
+              strokeWidth: 2.5,
+              color: ResourceUiConstants.textNavy,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Default: download icon
+    return IconButton(
+      onPressed: onDownload,
+      icon: const Icon(
+        Icons.file_download_outlined,
+        color: ResourceUiConstants.textNavy,
+        size: 26,
       ),
     );
   }
