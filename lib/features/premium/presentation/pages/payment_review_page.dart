@@ -6,12 +6,22 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/branding_widgets.dart';
 import '../../../auth/providers/session_provider.dart';
+import '../../../device/providers/device_status_provider.dart';
 import '../widgets/payment_widgets.dart';
 
 class PaymentReviewPage extends ConsumerWidget {
   const PaymentReviewPage({super.key});
 
   Future<void> _checkStatus(BuildContext context, WidgetRef ref) async {
+    // First, call the heartbeat endpoint to fetch the latest
+    // subscription_status from the server and persist it to SecureStorage.
+    try {
+      await ref.read(deviceStatusProvider.notifier).refresh();
+    } catch (_) {
+      // Heartbeat may fail (offline, etc.) — continue with cached data.
+    }
+
+    // Now isPremiumProvider reads the freshly updated SecureStorage.
     final isPremium = await ref.refresh(isPremiumProvider.future);
     if (!context.mounted) return;
     if (isPremium) {

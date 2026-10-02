@@ -1,15 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../auth/providers/auth_provider.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
-  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  String _userDept = 'Not selected';
+  String _userYear = 'Not selected';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSelections();
+  }
+
+  Future<void> _loadSelections() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedYear = prefs.getInt('selected_academic_year');
+      final savedField = prefs.getString('selected_field');
+      if (mounted) {
+        setState(() {
+          if (savedYear != null) {
+            _userYear = 'Year $savedYear';
+          }
+          if (savedField != null && savedField.isNotEmpty) {
+            _userDept = savedField;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _logout(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -44,7 +77,7 @@ class ProfilePage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).valueOrNull;
 
     final userName = (user?.name != null && user!.name.isNotEmpty)
@@ -56,8 +89,8 @@ class ProfilePage extends ConsumerWidget {
     final userPhone = (user?.phone != null && user!.phone!.isNotEmpty)
         ? user.phone!
         : '0912345678';
-    const userDept = 'Software Engineering';
-    const userYear = 'Second Year';
+    final userDept = _userDept;
+    final userYear = _userYear;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -233,7 +266,7 @@ class ProfilePage extends ConsumerWidget {
                         width: double.infinity,
                         height: 52,
                         child: OutlinedButton.icon(
-                          onPressed: () => _logout(context, ref),
+                          onPressed: () => _logout(context),
                           icon: const Icon(
                             Icons.logout_rounded,
                             color: Color(0xFFDC2626),

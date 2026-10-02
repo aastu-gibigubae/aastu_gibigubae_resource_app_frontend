@@ -231,8 +231,8 @@ class ResourceDetailPage extends ConsumerWidget {
                       const SizedBox(height: 18),
                       _buildSpecRow(
                         icon: Icons.description_outlined,
-                        label: 'Pages',
-                        value: '40 Pages',
+                        label: 'Format',
+                        value: 'PDF Document',
                       ),
                     ],
                   ),

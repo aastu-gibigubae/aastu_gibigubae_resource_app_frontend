@@ -9,10 +9,11 @@ import '../../../core/constants/storage_keys.dart';
 /// Determines where to navigate after the splash screen:
 ///   • onboarding  — first launch (onboarding not yet seen)
 ///   • login       — returning user without a valid session
-///   • selection   — returning user with a valid session
+///   • home        — returning premium user (skip selection)
+///   • selection   — returning free user with a valid session
 /// ================================================================
 
-enum SplashDestination { onboarding, login, selection }
+enum SplashDestination { onboarding, login, home, selection }
 
 final splashDestinationProvider =
     FutureProvider<SplashDestination>((ref) async {
@@ -31,7 +32,17 @@ final splashDestinationProvider =
   final token = await storage.read(StorageKeys.accessToken);
   final hasToken = token != null && token.isNotEmpty;
 
-  return hasToken
-      ? SplashDestination.selection
-      : SplashDestination.login;
+  if (!hasToken) {
+    return SplashDestination.login;
+  }
+
+  // ── Check if the user is premium → skip selection ───────────────
+  final subscriptionStatus =
+      await storage.read(StorageKeys.subscriptionStatus) ?? 'none';
+  final isPremium =
+      subscriptionStatus == 'active' || subscriptionStatus == 'premium';
+
+  return isPremium
+      ? SplashDestination.home
+      : SplashDestination.selection;
 });
