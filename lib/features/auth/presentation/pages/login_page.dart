@@ -185,9 +185,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: GestureDetector(
-                        onTap: () {
-                          // TODO: implement forgot password
-                        },
+                        onTap: () => context.push(RouteNames.forgotPassword),
                         child: const Text(
                           'Forgot Password',
                           style: TextStyle(

@@ -30,6 +30,13 @@ abstract class AuthRemoteDataSource {
   Future<void> logout();
 
   Future<TokenModel> refreshToken(String refreshToken);
+
+  Future<String> forgotPassword(String email);
+
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -103,5 +110,37 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       data: {'refresh_token': refreshToken},
     );
     return TokenModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // ── Forgot password ────────────────────────────────────────────
+
+  @override
+  Future<String> forgotPassword(String email) async {
+    final response = await _dio.post(
+      ApiConstants.forgotPassword,
+      data: {'email': email},
+    );
+    final data = response.data as Map<String, dynamic>?;
+    return data?['message'] as String? ??
+        'If that email exists, a reset link has been sent.';
+  }
+
+  // ── Reset password ─────────────────────────────────────────────
+
+  @override
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.resetPassword,
+      data: {
+        'token': token,
+        'new_password': newPassword,
+      },
+    );
+    final data = response.data as Map<String, dynamic>?;
+    return data?['message'] as String? ??
+        'Password reset. Please log in again.';
   }
 }

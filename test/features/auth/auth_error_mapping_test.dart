@@ -38,6 +38,16 @@ class _FakeFailingAuthRepository implements AuthRepository {
 
   @override
   Future<User?> getCurrentUser() => throw UnimplementedError();
+
+  @override
+  Future<String> forgotPassword(String email) => throw UnimplementedError();
+
+  @override
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  }) =>
+      throw UnimplementedError();
 }
 
 void main() {

@@ -45,7 +45,6 @@ class RouteNames {
 
   // ── Device ────────────────────────────────────────────────────
   static const String deviceStatus = '/device-status';
-  static const String profile = '/profile';
 
   // ── Legacy / Alternative aliases ──────────────────────────────
   static const String streams = '/streams';
