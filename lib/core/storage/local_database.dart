@@ -158,6 +158,22 @@ class LocalDatabase {
     return db.insert(table, values, conflictAlgorithm: conflictAlgorithm);
   }
 
+  /// High-performance batch insert/replace executing all operations
+  /// in a single native SQLite transaction.
+  static Future<void> batchInsert(
+    String table,
+    List<Map<String, dynamic>> items, {
+    ConflictAlgorithm conflictAlgorithm = ConflictAlgorithm.replace,
+  }) async {
+    if (items.isEmpty) return;
+    final db = await database;
+    final batch = db.batch();
+    for (final item in items) {
+      batch.insert(table, item, conflictAlgorithm: conflictAlgorithm);
+    }
+    await batch.commit(noResult: true);
+  }
+
   static Future<List<Map<String, dynamic>>> query(
     String table, {
     String? where,

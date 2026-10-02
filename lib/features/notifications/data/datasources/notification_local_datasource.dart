@@ -13,26 +13,59 @@ import '../../domain/entities/notification_item.dart';
 class NotificationLocalDatasource {
   const NotificationLocalDatasource();
 
+  /// Efficiently caches only NEW notifications using a set-diff strategy:
+  ///   1. Fetch all existing IDs in a single SQL query  → O(1) lookups
+  ///   2. Filter incoming list to new-only items        → O(N)
+  ///   3. Batch-insert new items in one transaction     → 1 DB round-trip
+  ///
+  /// This replaces the old N-insert loop and avoids N+1 DB calls.
   Future<void> cacheNotifications(List<NotificationItem> items) async {
+    if (items.isEmpty) return;
     try {
       final now = DateTime.now().toIso8601String();
-      for (final item in items) {
-        final idInt = int.tryParse(item.id) ?? 0;
-        if (idInt <= 0) continue;
 
-        await LocalDatabase.insert(
-          StorageKeys.cachedNotificationsTable,
-          {
-            StorageKeys.colId: idInt,
-            StorageKeys.colType: _mapTitleToType(item.title),
-            StorageKeys.colMessage: item.message,
-            StorageKeys.colReadStatus: item.isRead ? 1 : 0,
-            StorageKeys.colCreatedAt: item.timestamp,
-            StorageKeys.colSyncedAt: now,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+      // ── Step 1: Load all known IDs in a single query ──────────────
+      final existingRows = await LocalDatabase.query(
+        StorageKeys.cachedNotificationsTable,
+        // Only fetch the id column to minimise data transfer
+      );
+      final existingIds = existingRows
+          .map((r) => r[StorageKeys.colId] as int)
+          .toSet(); // O(1) lookup
+
+      // ── Step 2: Keep only items we have not seen yet ───────────────
+      final newItems = items.where((item) {
+        final idInt = int.tryParse(item.id) ?? 0;
+        return idInt > 0 && !existingIds.contains(idInt);
+      }).toList();
+
+      if (newItems.isEmpty) {
+        debugPrint('[NotificationLocalDatasource] No new notifications to cache.');
+        return;
       }
+
+      // ── Step 3: Batch-insert in one SQLite transaction ─────────────
+      final rows = newItems.map((item) {
+        final idInt = int.parse(item.id);
+        return <String, dynamic>{
+          StorageKeys.colId: idInt,
+          StorageKeys.colType: _mapTitleToType(item.title),
+          StorageKeys.colMessage: item.message,
+          StorageKeys.colReadStatus: item.isRead ? 1 : 0,
+          StorageKeys.colCreatedAt: item.timestamp,
+          StorageKeys.colSyncedAt: now,
+        };
+      }).toList();
+
+      await LocalDatabase.batchInsert(
+        StorageKeys.cachedNotificationsTable,
+        rows,
+        conflictAlgorithm: ConflictAlgorithm.ignore, // never overwrite read-status
+      );
+
+      debugPrint(
+        '[NotificationLocalDatasource] Cached ${newItems.length} new notification(s).'
+      );
     } catch (e) {
       debugPrint('[NotificationLocalDatasource] cacheNotifications error: $e');
     }

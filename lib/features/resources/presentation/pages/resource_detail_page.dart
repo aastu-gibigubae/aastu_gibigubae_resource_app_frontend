@@ -6,7 +6,6 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/widgets/category_icons.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../widgets/download_success_dialog.dart';
@@ -138,10 +137,7 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final res = widget.resource ??
-        (widget.resourceId > 0
-            ? const MockResourceDatasource().getResourceById(widget.resourceId)
-            : null);
+    final res = widget.resource;
 
     if (res == null) {
       return Scaffold(

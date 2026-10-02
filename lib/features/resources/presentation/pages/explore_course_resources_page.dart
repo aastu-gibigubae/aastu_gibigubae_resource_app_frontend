@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/widgets/curved_header.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
+import '../../providers/resource_providers.dart';
+import '../../domain/entities/resource_category_type.dart';
 import '../../domain/entities/resource_item.dart';
 
 class ExploreCourseResourcesPage extends ConsumerStatefulWidget {
@@ -34,11 +35,15 @@ class _ExploreCourseResourcesPageState
 
   @override
   Widget build(BuildContext context) {
-    final sampleResources = const MockResourceDatasource()
-        .getAllResources()
-        .where((r) => r.isFreeSample)
-        .take(4)
-        .toList();
+    // Pull first-year midterm resources as sample previews
+    final sampleAsync = ref.watch(courseResourcesProvider(
+      const CourseResourcesParams(courseId: 1, category: ResourceCategoryType.midterms),
+    ));
+    final sampleResources = sampleAsync.valueOrNull?.resources
+            .where((r) => r.isFreeSample)
+            .take(4)
+            .toList() ??
+        const [];
 
     return Scaffold(
       backgroundColor: Colors.white,

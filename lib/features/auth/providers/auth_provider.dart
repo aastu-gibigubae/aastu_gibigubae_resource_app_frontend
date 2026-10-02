@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/app_providers.dart';
-import '../../../core/constants/mock_config.dart';
-import '../../../core/constants/storage_keys.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../domain/entities/user.dart';
 import 'session_provider.dart';
@@ -12,38 +10,11 @@ import 'session_provider.dart';
 ///
 /// Holds the currently authenticated user.
 /// AsyncValue[User?] — null means logged out.
-///
-/// When [kMockAuth] is true all backend calls are skipped and a
-/// fake user is returned immediately so screens can be developed
-/// without a running backend.
 /// ================================================================
-
-// ── Mock user ─────────────────────────────────────────────────────
-
-User get _mockUser => User(
-      id: kMockUserId,
-      name: kMockUserName,
-      email: kMockUserEmail,
-      role: 'student',
-      subscriptionStatus: 'none',
-      activationStatus: 'active',
-      createdAt: DateTime(2026, 1, 1),
-    );
-
-// ─────────────────────────────────────────────────────────────────
 
 class AuthNotifier extends AsyncNotifier<User?> {
   @override
   Future<User?> build() async {
-    if (kMockAuth) {
-      // Check if we already wrote a mock token (i.e. user "logged in").
-      final token = await ref
-          .read(secureStorageProvider)
-          .read(StorageKeys.accessToken);
-      return (token != null && token.isNotEmpty) ? _mockUser : null;
-    }
-
-    // Real path — restore session from secure storage.
     return ref.watch(authRepositoryProvider).getCurrentUser();
   }
 
@@ -54,12 +25,6 @@ class AuthNotifier extends AsyncNotifier<User?> {
     required String password,
   }) async {
     state = const AsyncValue.loading();
-
-    if (kMockAuth) {
-      await _writeMockTokens();
-      state = AsyncValue.data(_mockUser);
-      return null; // success
-    }
 
     try {
       final fingerprint = await ref
@@ -97,12 +62,6 @@ class AuthNotifier extends AsyncNotifier<User?> {
   }) async {
     state = const AsyncValue.loading();
 
-    if (kMockAuth) {
-      await _writeMockTokens();
-      state = AsyncValue.data(_mockUser);
-      return null; // success
-    }
-
     try {
       final fingerprint = await ref
           .read(deviceFingerprintServiceProvider)
@@ -136,13 +95,6 @@ class AuthNotifier extends AsyncNotifier<User?> {
   Future<void> logout() async {
     state = const AsyncValue.loading();
 
-    if (kMockAuth) {
-      await ref.read(secureStorageProvider).deleteAll();
-      state = const AsyncValue.data(null);
-      _invalidateSessionProviders();
-      return;
-    }
-
     try {
       await ref.read(logoutUseCaseProvider).call();
     } finally {
@@ -161,15 +113,6 @@ class AuthNotifier extends AsyncNotifier<User?> {
     ref.container.invalidate(subscriptionStatusProvider);
     // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
     ref.container.invalidate(isPremiumProvider);
-  }
-
-  // ── Private helpers ────────────────────────────────────────────
-
-  Future<void> _writeMockTokens() async {
-    final storage = ref.read(secureStorageProvider);
-    await storage.write(StorageKeys.accessToken, kMockAccessToken);
-    await storage.write(StorageKeys.refreshToken, kMockRefreshToken);
-    await storage.write(StorageKeys.userId, kMockUserId);
   }
 }
 

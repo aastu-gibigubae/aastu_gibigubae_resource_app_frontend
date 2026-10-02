@@ -7,7 +7,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/category_icons.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
+import '../../domain/entities/course_item.dart';
+import '../../domain/entities/recent_activity_item.dart';
 import '../../domain/entities/resource_category_type.dart';
 import '../constants/resource_ui_constants.dart';
 import '../widgets/popular_categories_grid.dart';
@@ -284,29 +285,15 @@ class _HomePageState extends ConsumerState<HomePage>
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                    error: (err, _) => Row(
-                      children: MockResourceDatasource.streams.take(2).map((stream) {
-                        final icon = stream.name.toLowerCase().contains('eng')
-                            ? Icons.settings
-                            : Icons.science_outlined;
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: stream != MockResourceDatasource.streams.take(2).last ? 12 : 0,
-                            ),
-                            child: StreamCard(
-                              title: stream.name,
-                              icon: icon,
-                              onTap: () {
-                                ref
-                                    .read(selectedStreamFilterProvider.notifier)
-                                    .state = stream.id;
-                                context.push(RouteNames.browse);
-                              },
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    error: (err, _) => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          'Could not load streams. Pull down to refresh.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -393,20 +380,40 @@ class _HomePageState extends ConsumerState<HomePage>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...MockResourceDatasource.recentActivities.map(
-                    (act) => RecentActivityTile(
-                      activity: act,
-                      onTap: () {
-                        context.push(
-                          RouteNames.courseCategoryResources,
-                          extra: {
-                            'courseId': act.id,
-                            'category': ResourceCategoryType.handouts,
-                          },
-                        );
-                      },
+                  // Recent activities derived from downloaded resources
+                  ...ref.watch(downloadedResourcesProvider).whenData((items) {
+                    return items.take(3).map(
+                      (res) => RecentActivityTile(
+                        activity: RecentActivityItem(
+                          id: res.id,
+                          title: res.title,
+                          courseName: res.courseName,
+                          categoryLabel: res.category.label,
+                          academicYear: res.academicYear,
+                          semester: res.semester,
+                          typeBadge: 'PDF',
+                          badgeColor: const Color(0xFFEF4444),
+                        ),
+                        onTap: () {
+                          context.push(
+                            RouteNames.resourceDetail,
+                            extra: res,
+                          );
+                        },
+                      ),
+                    ).toList();
+                  }).valueOrNull ?? [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          'No recent activity yet. Download resources to see them here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -425,8 +432,7 @@ class _HomePageState extends ConsumerState<HomePage>
     ResourceCategoryType category,
   ) {
     final coursesAsync = ref.read(coursesProvider(const CoursesParams()));
-    final courses = coursesAsync.valueOrNull?.courses ??
-        MockResourceDatasource.freshmanCourses;
+    final courses = coursesAsync.valueOrNull?.courses ?? <CourseItem>[];
 
     showModalBottomSheet(
       context: context,

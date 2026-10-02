@@ -5,7 +5,6 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/category_icons.dart';
-import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/course_item.dart';
 import '../../providers/resource_providers.dart';
 import '../constants/resource_ui_constants.dart';
@@ -35,8 +34,13 @@ class CourseCategoriesPage extends ConsumerWidget {
       data: (result) {
         final course = result.courses.firstWhere(
           (c) => c.id == courseId,
-          orElse: () =>
-              const MockResourceDatasource().getCourseById(courseId),
+          orElse: () => CourseItem(
+            id: courseId,
+            departmentId: 0,
+            name: 'Course #$courseId',
+            academicYear: 1,
+            iconKey: 'book',
+          ),
         );
         return _buildContent(context, course);
       },
@@ -45,8 +49,13 @@ class CourseCategoriesPage extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (err, _) {
-        final course =
-            const MockResourceDatasource().getCourseById(courseId);
+        final course = CourseItem(
+          id: courseId,
+          departmentId: 0,
+          name: 'Course #$courseId',
+          academicYear: 1,
+          iconKey: 'book',
+        );
         return _buildContent(context, course);
       },
     );

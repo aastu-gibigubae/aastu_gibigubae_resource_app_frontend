@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/app_providers.dart';
 import '../../auth/providers/session_provider.dart';
 import '../../resources/data/models/pagination_model.dart';
-import '../data/datasources/mock_resource_datasource.dart';
 import '../data/datasources/resource_download_service.dart';
 import '../data/datasources/resource_local_datasource.dart';
 import '../data/datasources/resource_remote_datasource.dart';
@@ -94,11 +93,10 @@ final streamsProvider =
 
   // Fallback to offline SQLite cache
   final cached = await localDs.getCachedStreams();
-  if (cached.isNotEmpty) {
-    return cached;
-  }
+  if (cached.isNotEmpty) return cached;
 
-  return MockResourceDatasource.streams;
+  // No offline cache and no network — return empty list (UI shows error state)
+  return [];
 });
 
 // Departments provider with offline cache support
@@ -219,24 +217,13 @@ final coursesProvider = AutoDisposeFutureProvider.family<
     );
   }
 
-  // Graceful fallback when backend database is not yet seeded or offline
-  var fallbackCourses = MockResourceDatasource.allCourses;
-  if (params.year != null && params.year != 0) {
-    fallbackCourses = fallbackCourses
-        .where((c) => c.academicYear == params.year)
-        .toList();
-  }
-  if (params.streamId != null) {
-    fallbackCourses = fallbackCourses
-        .where((c) => c.streamId == null || c.streamId == params.streamId)
-        .toList();
-  }
+  // No cache and no network — return empty list (UI shows empty state)
   return (
-    courses: fallbackCourses,
+    courses: const <CourseItem>[],
     pagination: PaginationModel(
       page: params.page,
       limit: 20,
-      total: fallbackCourses.length,
+      total: 0,
       totalPages: 1,
     ),
   );
@@ -345,38 +332,13 @@ final courseResourcesProvider = AutoDisposeFutureProvider.family<
     );
   }
 
-  // Mock fallback only on error when no offline cache exists
-  final rawFallback = const MockResourceDatasource()
-      .getCategoryResources(courseId: params.courseId, category: params.category);
-  final fallbackList = rawFallback.map((item) {
-    if (isPremium || item.isFreeSample) {
-      return item;
-    }
-    return ResourceItem(
-      id: item.id,
-      courseId: item.courseId,
-      title: item.title,
-      description: item.description,
-      category: item.category,
-      isFreeSample: item.isFreeSample,
-      locked: true,
-      reasonCode: 'premium_required',
-      message: 'Upgrade to Premium to access this resource.',
-      fileUrl: null,
-      fileSizeBytes: item.fileSizeBytes,
-      checksum: item.checksum,
-      courseName: item.courseName,
-      semester: item.semester,
-      academicYear: item.academicYear,
-    );
-  }).toList();
-
+  // No offline cache and no network — return empty list
   return (
-    resources: fallbackList,
+    resources: const <ResourceItem>[],
     pagination: PaginationModel(
       page: params.page,
       limit: 20,
-      total: fallbackList.length,
+      total: 0,
       totalPages: 1,
     ),
   );
