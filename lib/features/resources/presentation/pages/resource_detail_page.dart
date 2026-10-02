@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -21,15 +20,30 @@ class ResourceDetailPage extends ConsumerWidget {
     this.resourceId = 0,
   });
 
-  Future<void> _handleDownload(BuildContext context, ResourceItem res) async {
-    if (res.fileUrl != null && res.fileUrl!.isNotEmpty) {
-      final uri = Uri.parse(res.fileUrl!);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _handleDownload(
+    BuildContext context,
+    WidgetRef ref,
+    ResourceItem res,
+  ) async {
+    try {
+      final downloadService = ref.read(resourceDownloadServiceProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading resource into app storage...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      await downloadService.downloadResource(res);
+      ref.invalidate(isResourceDownloadedProvider(res.id));
+      if (context.mounted) {
+        await showDownloadSuccessDialog(context);
       }
-    }
-    if (context.mounted) {
-      await showDownloadSuccessDialog(context);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
     }
   }
 
@@ -60,6 +74,8 @@ class ResourceDetailPage extends ConsumerWidget {
     final fileSizeStr = res.fileSizeBytes > 0
         ? '${(res.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB'
         : '2.4 MB';
+    final isDownloaded =
+        ref.watch(isResourceDownloadedProvider(res.id)).valueOrNull ?? false;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -350,20 +366,24 @@ class ResourceDetailPage extends ConsumerWidget {
 
                       const SizedBox(height: 14),
 
-                      // Download PDF button (Gold/Amber)
+                      // Download PDF button (Gold/Amber or Green if Downloaded)
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
-                          onPressed: () => _handleDownload(context, res),
-                          icon: const Icon(
-                            Icons.download_rounded,
+                          onPressed: () => _handleDownload(context, ref, res),
+                          icon: Icon(
+                            isDownloaded
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.download_rounded,
                             color: Colors.white,
                             size: 22,
                           ),
-                          label: const Text(
-                            'Download PDF',
-                            style: TextStyle(
+                          label: Text(
+                            isDownloaded
+                                ? 'Downloaded in App (Offline Ready)'
+                                : 'Download PDF',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.2,
@@ -371,7 +391,9 @@ class ResourceDetailPage extends ConsumerWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.secondary,
+                            backgroundColor: isDownloaded
+                                ? const Color(0xFF16A34A)
+                                : AppColors.secondary,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),

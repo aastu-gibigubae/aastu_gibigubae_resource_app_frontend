@@ -5,6 +5,7 @@ import '../../../app/providers/app_providers.dart';
 import '../../auth/providers/session_provider.dart';
 import '../../resources/data/models/pagination_model.dart';
 import '../data/datasources/mock_resource_datasource.dart';
+import '../data/datasources/resource_download_service.dart';
 import '../data/datasources/resource_remote_datasource.dart';
 import '../data/models/search_result_model.dart';
 import '../domain/entities/course_item.dart';
@@ -16,6 +17,26 @@ import '../domain/entities/stream_item.dart';
 final resourceRemoteDatasourceProvider =
     Provider<ResourceRemoteDatasource>((ref) {
   return ResourceRemoteDatasource(ref.watch(dioProvider));
+});
+
+// In-app sandbox download service provider
+final resourceDownloadServiceProvider =
+    Provider<ResourceDownloadService>((ref) {
+  return ResourceDownloadService(ref.watch(dioProvider));
+});
+
+// Reactively checks if a resource is saved in the app's internal sandbox
+final isResourceDownloadedProvider =
+    FutureProvider.family<bool, int>((ref, resourceId) async {
+  final service = ref.watch(resourceDownloadServiceProvider);
+  return service.isResourceDownloaded(resourceId);
+});
+
+// Returns list of all downloaded resource IDs
+final downloadedResourceIdsProvider =
+    FutureProvider<List<int>>((ref) async {
+  final service = ref.watch(resourceDownloadServiceProvider);
+  return service.getDownloadedResourceIds();
 });
 
 // Streams provider
