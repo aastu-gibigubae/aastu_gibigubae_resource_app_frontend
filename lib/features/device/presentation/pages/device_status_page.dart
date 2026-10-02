@@ -15,88 +15,37 @@ class DeviceStatusPage extends ConsumerWidget {
     final user = ref.watch(authProvider).valueOrNull;
     final deviceStatusAsync = ref.watch(deviceStatusProvider);
 
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Navy Curved Header matching image copy 19.png
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + 12,
-                  24,
-                  26,
-                ),
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go(RouteNames.home);
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Status',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'Your account and access, in one place',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Refresh button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {
-                        ref.read(deviceStatusProvider.notifier).refresh();
-                      },
-                    ),
-                  ],
-                ),
-              ),
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ── COLLAPSIBLE HEADER ────────────────────────────────
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StatusAppBarDelegate(
+              topPadding: topPadding,
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.home);
+                }
+              },
+              onRefresh: () {
+                ref.read(deviceStatusProvider.notifier).refresh();
+              },
+            ),
+          ),
 
-              const SizedBox(height: 28),
+          // ── BODY CONTENT ──────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 28),
 
               // Content driven by deviceStatusProvider
               deviceStatusAsync.when(
@@ -203,9 +152,10 @@ class DeviceStatusPage extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildStatusContent({
     required BuildContext context,
@@ -417,5 +367,130 @@ class DeviceStatusPage extends ConsumerWidget {
         const SizedBox(height: 32),
       ],
     );
+  }
+}
+
+/// ===============================================================
+/// COLLAPSIBLE APP BAR DELEGATE FOR STATUS SCREEN
+/// ===============================================================
+
+class _StatusAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final VoidCallback onBack;
+  final VoidCallback onRefresh;
+
+  _StatusAppBarDelegate({
+    required this.topPadding,
+    required this.onBack,
+    required this.onRefresh,
+  });
+
+  @override
+  double get minExtent => topPadding + kToolbarHeight;
+
+  @override
+  double get maxExtent => topPadding + 88.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
+    final cornerRadius = (1.0 - progress) * 28.0;
+    final subtitleOpacity = (1.0 - progress * 2.2).clamp(0.0, 1.0);
+
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(cornerRadius),
+          bottomRight: Radius.circular(cornerRadius),
+        ),
+        boxShadow: progress > 0.8
+            ? [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned(
+            top: topPadding,
+            left: 4,
+            right: 8,
+            height: kToolbarHeight,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: onBack,
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Status',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (subtitleOpacity > 0.0)
+                        Opacity(
+                          opacity: subtitleOpacity,
+                          child: const Text(
+                            'Your account and access, in one place',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  tooltip: 'Refresh',
+                  onPressed: onRefresh,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StatusAppBarDelegate oldDelegate) {
+    return oldDelegate.topPadding != topPadding;
   }
 }

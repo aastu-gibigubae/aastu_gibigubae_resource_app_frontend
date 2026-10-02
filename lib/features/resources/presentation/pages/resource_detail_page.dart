@@ -166,81 +166,36 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
     final isDownloaded =
         ref.watch(isResourceDownloadedProvider(res.id)).valueOrNull ?? false;
 
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Navy Curved Header matching image copy 16.png
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + 12,
-                  24,
-                  26,
-                ),
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go(RouteNames.browse);
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            courseTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            res.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ── COLLAPSIBLE HEADER ────────────────────────────────
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _ResourceDetailAppBarDelegate(
+              topPadding: topPadding,
+              courseTitle: courseTitle,
+              resourceTitle: res.title,
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.browse);
+                }
+              },
+            ),
+          ),
 
-              const SizedBox(height: 28),
+          // ── BODY CONTENT ──────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 28),
 
               // Title Section with PDF Badge matching image copy 16.png
               Padding(
@@ -538,9 +493,10 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildSpecRow({
     required IconData icon,
@@ -735,5 +691,123 @@ class _ResourceDetailPageState extends ConsumerState<ResourceDetailPage> {
       default:
         return code.replaceAll('_', ' ').toUpperCase();
     }
+  }
+}
+
+/// ===============================================================
+/// COLLAPSIBLE APP BAR DELEGATE FOR RESOURCE DETAIL SCREEN
+/// ===============================================================
+
+class _ResourceDetailAppBarDelegate
+    extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final String courseTitle;
+  final String resourceTitle;
+  final VoidCallback onBack;
+
+  _ResourceDetailAppBarDelegate({
+    required this.topPadding,
+    required this.courseTitle,
+    required this.resourceTitle,
+    required this.onBack,
+  });
+
+  @override
+  double get minExtent => topPadding + kToolbarHeight;
+
+  @override
+  double get maxExtent => topPadding + 88.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
+    final cornerRadius = (1.0 - progress) * 28.0;
+
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(cornerRadius),
+          bottomRight: Radius.circular(cornerRadius),
+        ),
+        boxShadow: progress > 0.8
+            ? [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned(
+            top: topPadding,
+            left: 4,
+            right: 16,
+            height: kToolbarHeight,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: onBack,
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        courseTitle,
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(220),
+                          fontSize: progress > 0.5 ? 12 : 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        resourceTitle,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: progress > 0.5 ? 15 : 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(
+      covariant _ResourceDetailAppBarDelegate oldDelegate) {
+    return oldDelegate.topPadding != topPadding ||
+        oldDelegate.courseTitle != courseTitle ||
+        oldDelegate.resourceTitle != resourceTitle;
   }
 }
