@@ -35,4 +35,14 @@ abstract class AuthRepository {
 
   /// Returns the currently stored [User], or null if not logged in.
   Future<User?> getCurrentUser();
+
+  /// Sends a password reset email to the given address.
+  Future<void> forgotPassword(String email);
+
+  /// Resets the password using an optional reset token.
+  Future<void> resetPassword({
+    required String? token,
+    required String newPassword,
+    required String confirmPassword,
+  });
 }

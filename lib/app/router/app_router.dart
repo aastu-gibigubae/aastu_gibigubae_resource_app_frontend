@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/onboarding/presentation/pages/welcome_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
@@ -70,6 +72,27 @@ GoRouter createRouter({
         pageBuilder: (context, state) => const MaterialPage(
           child: SignUpPage(),
         ),
+      ),
+
+      GoRoute(
+        path: RouteNames.forgotPassword,
+        name: RouteNames.forgotPassword,
+        pageBuilder: (context, state) => const MaterialPage(
+          child: ForgotPasswordPage(),
+        ),
+      ),
+
+      GoRoute(
+        path: RouteNames.resetPassword,
+        name: RouteNames.resetPassword,
+        pageBuilder: (context, state) {
+          final extra = state.uri.queryParameters['token'];
+          return MaterialPage(
+            child: ResetPasswordPage(
+              token: extra,
+            ),
+          );
+        },
       ),
 
       // ============================================================

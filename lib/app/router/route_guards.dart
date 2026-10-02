@@ -31,6 +31,8 @@ class RouteGuards {
         location == RouteNames.onboarding ||
         location == RouteNames.login ||
         location == RouteNames.signup ||
+        location == RouteNames.forgotPassword ||
+        location == RouteNames.resetPassword ||
         location == RouteNames.selection ||
         location == RouteNames.courseResources;
 

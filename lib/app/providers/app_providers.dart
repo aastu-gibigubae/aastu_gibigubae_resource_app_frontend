@@ -18,6 +18,8 @@ import '../../features/auth/domain/usecases/login.dart';
 import '../../features/auth/domain/usecases/logout.dart';
 import '../../features/auth/domain/usecases/refresh_session.dart';
 import '../../features/auth/domain/usecases/signup.dart';
+import '../../features/auth/domain/usecases/forgot_password.dart';
+import '../../features/auth/domain/usecases/reset_password.dart';
 import '../router/app_router.dart';
 import '../router/route_guards.dart';
 
@@ -111,6 +113,14 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
 
 final refreshSessionUseCaseProvider = Provider<RefreshSessionUseCase>((ref) {
   return RefreshSessionUseCase(ref.watch(authRepositoryProvider));
+});
+
+final forgotPasswordUseCaseProvider = Provider<ForgotPasswordUseCase>((ref) {
+  return ForgotPasswordUseCase(ref.watch(authRepositoryProvider));
+});
+
+final resetPasswordUseCaseProvider = Provider<ResetPasswordUseCase>((ref) {
+  return ResetPasswordUseCase(ref.watch(authRepositoryProvider));
 });
 
 // ── Router ──────────────────────────────────────────────────────

@@ -170,18 +170,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: GestureDetector(
-                        onTap: () {
-                          // TODO: implement forgot password
-                        },
-                        child: const Text(
-                          'Forgot Password',
-                          style: TextStyle(
-                            color: Color(0xFFD99B14),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Color(0xFFD99B14),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () =>
+                              context.push(RouteNames.forgotPassword),
+                          splashColor: const Color(0xFFD99B14).withValues(alpha: 0.1),
+                          highlightColor:
+                              const Color(0xFFD99B14).withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
+                            child: const Text(
+                              'Forgot Password',
+                              style: TextStyle(
+                                color: Color(0xFFD99B14),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Color(0xFFD99B14),
+                              ),
+                            ),
                           ),
                         ),
                       ),

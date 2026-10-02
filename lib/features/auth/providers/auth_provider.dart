@@ -128,6 +128,72 @@ class AuthNotifier extends AsyncNotifier<User?> {
     }
   }
 
+  // ── Forgot password ────────────────────────────────────────────
+
+  Future<String?> forgotPassword({
+    required String email,
+  }) async {
+    state = const AsyncValue.loading();
+
+    if (kMockAuth) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      state = const AsyncValue.data(null);
+      return null;
+    }
+
+    try {
+      final useCase = ref.read(forgotPasswordUseCaseProvider);
+      final result = await useCase(email: email);
+
+      state = const AsyncValue.data(null);
+
+      if (result.isSuccess) {
+        return null;
+      } else {
+        return result.failure?.message ?? 'Password reset request failed.';
+      }
+    } catch (e) {
+      state = const AsyncValue.data(null);
+      return e.toString();
+    }
+  }
+
+  // ── Reset password ─────────────────────────────────────────────
+
+  Future<String?> resetPassword({
+    required String? token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    state = const AsyncValue.loading();
+
+    if (kMockAuth) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      state = const AsyncValue.data(null);
+      return null;
+    }
+
+    try {
+      final useCase = ref.read(resetPasswordUseCaseProvider);
+      final result = await useCase(
+        token: token,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+
+      state = const AsyncValue.data(null);
+
+      if (result.isSuccess) {
+        return null;
+      } else {
+        return result.failure?.message ?? 'Password reset failed.';
+      }
+    } catch (e) {
+      state = const AsyncValue.data(null);
+      return e.toString();
+    }
+  }
+
   // ── Logout ─────────────────────────────────────────────────────
 
   Future<void> logout() async {

@@ -30,6 +30,14 @@ abstract class AuthRemoteDataSource {
   Future<void> logout();
 
   Future<TokenModel> refreshToken(String refreshToken);
+
+  Future<void> forgotPassword(String email);
+
+  Future<void> resetPassword({
+    required String? token,
+    required String newPassword,
+    required String confirmPassword,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -103,5 +111,44 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       data: {'refresh_token': refreshToken},
     );
     return TokenModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // ── Forgot password ────────────────────────────────────────────
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dio.post(
+        ApiConstants.forgotPassword,
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      throw ErrorMapper.fromDioException(e);
+    }
+  }
+
+  // ── Reset password ─────────────────────────────────────────────
+
+  @override
+  Future<void> resetPassword({
+    required String? token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'new_password': newPassword,
+        'confirm_password': confirmPassword,
+      };
+      if (token != null && token.isNotEmpty) {
+        data['token'] = token;
+      }
+      await _dio.post(
+        ApiConstants.resetPassword,
+        data: data,
+      );
+    } on DioException catch (e) {
+      throw ErrorMapper.fromDioException(e);
+    }
   }
 }
