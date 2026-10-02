@@ -18,11 +18,93 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/session_provider.dart';
 import '../../../notifications/providers/notification_providers.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spinController;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+  }
+
+  @override
+  void dispose() {
+    _spinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    _spinController.repeat();
+
+    try {
+      ref.invalidate(streamsProvider);
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(downloadedResourcesProvider);
+      ref.invalidate(coursesProvider(const CoursesParams()));
+
+      await Future.wait([
+        ref.read(streamsProvider.future),
+        ref.read(coursesProvider(const CoursesParams()).future),
+      ]);
+    } catch (e) {
+      debugPrint('[HomePage] Refresh error: $e');
+    } finally {
+      if (mounted) {
+        _spinController.stop();
+        _spinController.reset();
+        setState(() => _isRefreshing = false);
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF0F172A),
+            elevation: 6,
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            duration: const Duration(seconds: 2),
+            content: Row(
+              children: const [
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF10B981),
+                  size: 20,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Sync completed successfully',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final streamsAsync = ref.watch(streamsProvider);
     final user = ref.watch(authProvider).valueOrNull;
     final isPremiumAsync = ref.watch(isPremiumProvider);
@@ -37,13 +119,7 @@ class HomePage extends ConsumerWidget {
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: () async {
-          ref.invalidate(streamsProvider);
-          ref.invalidate(notificationsProvider);
-          ref.invalidate(downloadedResourcesProvider);
-          ref.invalidate(coursesProvider(const CoursesParams()));
-          await ref.read(streamsProvider.future);
-        },
+        onRefresh: _handleRefresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -55,30 +131,20 @@ class HomePage extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () async {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Syncing with backend...'),
-                            duration: Duration(milliseconds: 1200),
-                            backgroundColor: Color(0xFF1E3A8A),
-                          ),
-                        );
-                        ref.invalidate(streamsProvider);
-                        ref.invalidate(notificationsProvider);
-                        ref.invalidate(downloadedResourcesProvider);
-                        ref.invalidate(coursesProvider(const CoursesParams()));
-                        await ref.read(streamsProvider.future);
-                      },
+                      onTap: _handleRefresh,
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(30),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.refresh_rounded,
-                          color: Colors.white,
-                          size: 22,
+                        child: RotationTransition(
+                          turns: _spinController,
+                          child: const Icon(
+                            Icons.refresh_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
                       ),
                     ),

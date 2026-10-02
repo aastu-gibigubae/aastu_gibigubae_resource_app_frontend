@@ -284,37 +284,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                       const SizedBox(height: 24),
 
-                      // Offline Downloads Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton.icon(
-                          onPressed: () => context.push(RouteNames.downloads),
-                          icon: const Icon(
-                            Icons.download_for_offline_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          label: const Text(
-                            'Offline Downloads',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
                       // Red Outlined Log Out Button matching image copy 20.png
                       SizedBox(
                         width: double.infinity,
