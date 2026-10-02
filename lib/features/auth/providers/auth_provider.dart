@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers/app_providers.dart';
+import '../../../core/constants/storage_keys.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../domain/entities/user.dart';
 import 'session_provider.dart';
@@ -77,6 +79,13 @@ class AuthNotifier extends AsyncNotifier<User?> {
       );
 
       if (result.isSuccess) {
+        // New user — clear any leftover selection/explore flags
+        // so they always go through the selection flow fresh.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(StorageKeys.selectionCompleted);
+        await prefs.remove(StorageKeys.exploreSeen);
+        await prefs.remove(StorageKeys.paymentSeen);
+
         state = AsyncValue.data(result.user);
         return null;
       } else {
