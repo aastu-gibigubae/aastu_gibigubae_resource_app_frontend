@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/errors/error_mapper.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../../../../core/widgets/search_pill_bar.dart';
 import '../../data/models/search_result_model.dart';
 import '../../domain/entities/stream_item.dart';
@@ -230,6 +229,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     final selectedStream = ref.watch(selectedStreamFilterProvider);
     final selectedYear = ref.watch(selectedYearFilterProvider) ?? 1;
     final streams = ref.watch(streamsProvider).valueOrNull ?? [];
+    final topPadding = MediaQuery.of(context).padding.top;
 
     final coursesParams = CoursesParams(
       streamId: selectedStream,
@@ -245,207 +245,376 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
       onTap: () => _searchFocusNode.unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: Column(
-          children: [
-            // Header
-            CurvedHeader(
-              showBackButton: true,
-              onBack: _onBack,
-              title: ResourceUiConstants.browseTitle,
-              subtitle: ResourceUiConstants.browseSubtitle,
-              subtitleColor: Colors.white.withAlpha(220),
-              bottomChild: SearchPillBar(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                onChanged: _onSearchChanged,
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ── COLLAPSIBLE HEADER (Collapses to small app bar with back icon & Browse text) ──
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _BrowseAppBarDelegate(
+                topPadding: topPadding,
+                onBack: _onBack,
+                searchController: _searchController,
+                searchFocusNode: _searchFocusNode,
+                onSearchChanged: _onSearchChanged,
               ),
             ),
 
-            // Year and Stream Filter Chips
-            _buildFilterChips(
-              streams: streams,
-              selectedStream: selectedStream,
-              selectedYear: selectedYear,
+            // ── FILTER CHIPS (Year & Stream) ────────────────────
+            SliverToBoxAdapter(
+              child: _buildFilterChips(
+                streams: streams,
+                selectedStream: selectedStream,
+                selectedYear: selectedYear,
+              ),
             ),
 
-            // Courses and Results List
-            Expanded(
-              child: coursesAsync.when(
-                data: (result) {
-                  var courses = result.courses;
-                  if (_localFilter.isNotEmpty) {
-                    courses = courses
-                        .where((c) =>
-                            c.name.toLowerCase().contains(_localFilter))
-                        .toList();
-                  }
+            // ── COURSES AND RESULTS LIST ────────────────────────
+            ...coursesAsync.when(
+              data: (result) {
+                var courses = result.courses;
+                if (_localFilter.isNotEmpty) {
+                  courses = courses
+                      .where((c) =>
+                          c.name.toLowerCase().contains(_localFilter))
+                      .toList();
+                }
 
-                  final searchResults = searchResultsAsync?.valueOrNull ?? [];
-                  final resourceResults =
-                      searchResults.where((r) => r.isResource).toList();
+                final searchResults = searchResultsAsync?.valueOrNull ?? [];
+                final resourceResults =
+                    searchResults.where((r) => r.isResource).toList();
 
-                  final hasFilters = selectedStream != null ||
-                      selectedYear != 1 ||
-                      _localFilter.isNotEmpty;
+                final hasFilters = selectedStream != null ||
+                    selectedYear != 1 ||
+                    _localFilter.isNotEmpty;
 
-                  if (courses.isEmpty && resourceResults.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.menu_book_outlined,
-                                size: 56, color: Colors.grey.shade400),
-                            const SizedBox(height: 16),
-                            Text(
-                              _localFilter.isNotEmpty
-                                  ? 'No results matching "$_localFilter"'
-                                  : 'No courses found for selected filters.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
+                if (courses.isEmpty && resourceResults.isEmpty) {
+                  return [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.menu_book_outlined,
+                                  size: 56, color: Colors.grey.shade400),
+                              const SizedBox(height: 16),
+                              Text(
+                                _localFilter.isNotEmpty
+                                    ? 'No results matching "$_localFilter"'
+                                    : 'No courses found for selected filters.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (hasFilters) ...[
-                              const SizedBox(height: 14),
-                              OutlinedButton.icon(
-                                onPressed: _onSeeAll,
-                                icon: const Icon(Icons.refresh, size: 18),
-                                label: const Text('Clear Filters'),
-                              ),
+                              if (hasFilters) ...[
+                                const SizedBox(height: 14),
+                                OutlinedButton.icon(
+                                  onPressed: _onSeeAll,
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Clear Filters'),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                    );
-                  }
+                    ),
+                  ];
+                }
 
-                  String sectionTitle;
-                  if (selectedYear == 1) {
-                    sectionTitle = selectedStream != null
-                        ? '${streams.where((s) => s.id == selectedStream).firstOrNull?.name ?? "Freshman"} Freshman Courses'
-                        : ResourceUiConstants.freshmanCourses;
-                  } else {
-                    final streamName = streams
-                        .where((s) => s.id == selectedStream)
-                        .firstOrNull
-                        ?.name;
-                    sectionTitle = streamName != null
-                        ? 'Year $selectedYear $streamName Courses'
-                        : 'Year $selectedYear Courses';
-                  }
+                String sectionTitle;
+                if (selectedYear == 1) {
+                  sectionTitle = selectedStream != null
+                      ? '${streams.where((s) => s.id == selectedStream).firstOrNull?.name ?? "Freshman"} Freshman Courses'
+                      : ResourceUiConstants.freshmanCourses;
+                } else {
+                  final streamName = streams
+                      .where((s) => s.id == selectedStream)
+                      .firstOrNull
+                      ?.name;
+                  sectionTitle = streamName != null
+                      ? 'Year $selectedYear $streamName Courses'
+                      : 'Year $selectedYear Courses';
+                }
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              sectionTitle,
-                              style: const TextStyle(
-                                fontSize: 18,
+                return [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                sectionTitle,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _onSeeAll,
+                                child: const Text(
+                                  ResourceUiConstants.seeAll,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: ResourceUiConstants.textLink,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Matching courses (top card highlighted matching Figma image copy 13.png)
+                          ...courses.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final course = entry.value;
+                            final isHighlighted = index == 0 &&
+                                _localFilter.isEmpty &&
+                                selectedStream == null &&
+                                selectedYear == 1;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: CourseCard(
+                                course: course,
+                                isHighlighted: isHighlighted,
+                                onTap: () {
+                                  _searchFocusNode.unfocus();
+                                  context.push(
+                                    RouteNames.courseDetail,
+                                    extra: course,
+                                  );
+                                },
+                              ),
+                            );
+                          }),
+
+                          // If searching, also display any matching resources from global search
+                          if (resourceResults.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Matching Resources',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                            GestureDetector(
-                              onTap: _onSeeAll,
-                              child: const Text(
-                                ResourceUiConstants.seeAll,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: ResourceUiConstants.textLink,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
+                            const SizedBox(height: 10),
+                            ...resourceResults.map(_buildSearchResultTile),
                           ],
-                        ),
-                        const SizedBox(height: 14),
 
-                        // Matching courses (top card highlighted matching Figma image copy 13.png)
-                        ...courses.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final course = entry.value;
-                          final isHighlighted = index == 0 &&
-                              _localFilter.isEmpty &&
-                              selectedStream == null &&
-                              selectedYear == 1;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: CourseCard(
-                              course: course,
-                              isHighlighted: isHighlighted,
-                              onTap: () {
-                                _searchFocusNode.unfocus();
-                                context.push(
-                                  RouteNames.courseDetail,
-                                  extra: course,
-                                );
-                              },
-                            ),
-                          );
-                        }),
-
-                        // If searching, also display any matching resources from global search
-                        if (resourceResults.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Matching Resources',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ...resourceResults.map(_buildSearchResultTile),
+                          const SizedBox(height: 32),
                         ],
-                      ],
+                      ),
                     ),
-                  );
-                },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
+                  ),
+                ];
+              },
+              loading: () => [
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
-                error: (err, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            size: 48, color: Colors.redAccent),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Could not load courses.\n${ErrorMapper.userMessage(err)}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => ref.invalidate(
-                            coursesProvider(coursesParams),
+              ],
+              error: (err, _) => [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              size: 48, color: Colors.redAccent),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Could not load courses.\n${ErrorMapper.userMessage(err)}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.grey),
                           ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => ref.invalidate(
+                              coursesProvider(coursesParams),
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// ===============================================================
+/// COLLAPSIBLE APP BAR DELEGATE FOR BROWSE SCREEN
+/// ===============================================================
+
+class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final VoidCallback onBack;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final ValueChanged<String> onSearchChanged;
+
+  _BrowseAppBarDelegate({
+    required this.topPadding,
+    required this.onBack,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.onSearchChanged,
+  });
+
+  @override
+  double get minExtent => topPadding + kToolbarHeight;
+
+  @override
+  double get maxExtent => topPadding + 215.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
+
+    // Collapsed title fades in near the end of the collapse (from 0.5 to 1.0)
+    final collapsedOpacity = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
+
+    // Expanded large elements fade out quickly as soon as scrolling starts (from 0.0 to 0.65)
+    final expandedOpacity = (1.0 - progress * 1.55).clamp(0.0, 1.0);
+
+    // Curved bottom corner radius flattens as it collapses
+    final cornerRadius = (1.0 - progress) * 32.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(cornerRadius),
+          bottomRight: Radius.circular(cornerRadius),
+        ),
+        boxShadow: progress > 0.8
+            ? [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── EXPANDED VIEW (Large title, subtitle, search bar) ───
+          if (expandedOpacity > 0.0)
+            Positioned(
+              top: topPadding + 44,
+              left: 20,
+              right: 20,
+              bottom: 18,
+              child: Opacity(
+                opacity: expandedOpacity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Browse',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Find your course resources',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(220),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SearchPillBar(
+                      controller: searchController,
+                      focusNode: searchFocusNode,
+                      onChanged: onSearchChanged,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── COMPACT TOP APPBAR (Pinned: Back icon + Browse title) ───
+          Positioned(
+            top: topPadding,
+            left: 8,
+            right: 16,
+            height: kToolbarHeight,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: onBack,
+                ),
+                const SizedBox(width: 4),
+                if (collapsedOpacity > 0.0)
+                  Opacity(
+                    opacity: collapsedOpacity,
+                    child: const Text(
+                      'Browse',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _BrowseAppBarDelegate oldDelegate) {
+    return oldDelegate.topPadding != topPadding ||
+        oldDelegate.searchController != searchController;
   }
 }
