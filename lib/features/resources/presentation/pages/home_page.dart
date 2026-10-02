@@ -40,6 +40,21 @@ class HomePage extends ConsumerWidget {
           children: [
             // Header with greeting, status, search bar
             CurvedHeader(
+              trailing: GestureDetector(
+                onTap: () => context.push(RouteNames.notifications),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
               titleWidget: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -65,35 +80,33 @@ class HomePage extends ConsumerWidget {
                               ? ResourceUiConstants.premiumAccess
                               : 'Free Plan',
                           style: TextStyle(
-                            color: isPremium
-                                ? ResourceUiConstants.accentGold
-                                : Colors.white.withAlpha(220),
+                            color: Colors.white.withAlpha(220),
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         AppSpacing.hGapSm,
                         Container(
-                          width: 7,
-                          height: 7,
+                          width: 6,
+                          height: 6,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isPremium
-                                ? ResourceUiConstants.accentGold
+                                ? const Color(0xFF10B981)
                                 : const Color(0xFF9CA3AF),
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           isPremium
-                              ? ResourceUiConstants.activeStatus
+                              ? 'Active'
                               : 'Upgrade ✨',
                           style: TextStyle(
                             color: isPremium
-                                ? ResourceUiConstants.accentGold
+                                ? const Color(0xFF10B981)
                                 : const Color(0xFFFDE68A),
                             fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             decoration:
                                 isPremium ? null : TextDecoration.underline,
                           ),

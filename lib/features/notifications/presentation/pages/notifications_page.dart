@@ -16,9 +16,8 @@ class NotificationsPage extends ConsumerWidget {
       body: Column(
         children: [
           const CurvedHeader(
+            showBackButton: true,
             title: 'Notifications',
-            subtitle: 'Updates & Announcements',
-            subtitleColor: Color(0xFFF59E0B),
           ),
           Expanded(
             child: notificationsAsync.when(
@@ -41,12 +40,34 @@ class NotificationsPage extends ConsumerWidget {
                       .read(notificationsProvider.notifier)
                       .refresh(),
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 20),
-                    itemCount: notifications.length,
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                    itemCount: notifications.length + 1,
                     separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                     itemBuilder: (context, index) {
+                      if (index == notifications.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 24, bottom: 20),
+                          child: Column(
+                            children: const [
+                              Icon(
+                                Icons.mail_outline_rounded,
+                                color: Color(0xFF9CA3AF),
+                                size: 34,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                "That's everything — no email or push, just this list",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                       final notification = notifications[index];
                       return GestureDetector(
                         onTap: () {

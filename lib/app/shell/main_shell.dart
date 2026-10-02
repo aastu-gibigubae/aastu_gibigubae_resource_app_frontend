@@ -23,7 +23,7 @@ class MainShell extends StatelessWidget {
     _TabItem(icon: Icons.home_rounded, unselectedIcon: Icons.home_outlined, label: 'Home'),
     _TabItem(icon: Icons.search_rounded, unselectedIcon: Icons.search, label: 'Browse'),
     _TabItem(icon: Icons.check_circle_rounded, unselectedIcon: Icons.check_circle_outline, label: 'Status'),
-    _TabItem(icon: Icons.notifications_rounded, unselectedIcon: Icons.notifications_none_rounded, label: 'Notifications'),
+    _TabItem(icon: Icons.person_rounded, unselectedIcon: Icons.person_outline_rounded, label: 'Profile'),
   ];
 
   void _onTap(int index) {

@@ -182,10 +182,10 @@ GoRouter createRouter({
       ),
 
       GoRoute(
-        path: RouteNames.profile,
-        name: RouteNames.profile,
+        path: RouteNames.notifications,
+        name: RouteNames.notifications,
         pageBuilder: (context, state) => const MaterialPage(
-          child: ProfilePage(),
+          child: NotificationsPage(),
         ),
       ),
 
@@ -196,7 +196,7 @@ GoRouter createRouter({
       //   0 → Home          (/home)
       //   1 → Browse        (/browse)
       //   2 → Status        (/status)
-      //   3 → Notifications (/notifications)
+      //   3 → Profile       (/profile)
       // ============================================================
 
       StatefulShellRoute.indexedStack(
@@ -244,14 +244,14 @@ GoRouter createRouter({
             ],
           ),
 
-          // ── Branch 3: Notifications ─────────────────────────────
+          // ── Branch 3: Profile ───────────────────────────────────
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RouteNames.notifications,
-                name: RouteNames.notifications,
+                path: RouteNames.profile,
+                name: RouteNames.profile,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: NotificationsPage(),
+                  child: ProfilePage(),
                 ),
               ),
             ],

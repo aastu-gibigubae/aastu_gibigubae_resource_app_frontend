@@ -3,6 +3,7 @@ import '../../app/theme/app_colors.dart';
 
 class CurvedHeader extends StatelessWidget {
   final Widget? leading;
+  final Widget? trailing;
   final String? title;
   final String? subtitle;
   final Color? subtitleColor;
@@ -17,6 +18,7 @@ class CurvedHeader extends StatelessWidget {
   const CurvedHeader({
     super.key,
     this.leading,
+    this.trailing,
     this.title,
     this.subtitle,
     this.subtitleColor,
@@ -78,32 +80,46 @@ class CurvedHeader extends StatelessWidget {
                 ),
               ),
 
-            // Title and Subtitle area
-            if (titleWidget != null)
-              titleWidget!
-            else ...[
-              if (title != null)
-                Text(
-                  title!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
+            // Title and Subtitle area with optional trailing widget
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: titleWidget != null
+                      ? titleWidget!
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (title != null)
+                              Text(
+                                title!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle!,
+                                style: TextStyle(
+                                  color: subtitleColor ?? const Color(0xFFFBBF24),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                 ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle!,
-                  style: TextStyle(
-                    color: subtitleColor ?? const Color(0xFFFBBF24),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  trailing!,
+                ],
               ],
-            ],
+            ),
 
             // Bottom Child (e.g. Search Bar or Custom widget)
             if (bottomChild != null) ...[
