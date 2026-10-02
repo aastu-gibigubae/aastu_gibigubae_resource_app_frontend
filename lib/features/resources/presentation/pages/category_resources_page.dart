@@ -303,7 +303,7 @@ class _CategoryResourcesAppBarDelegate
   double get minExtent => topPadding + kToolbarHeight;
 
   @override
-  double get maxExtent => topPadding + 215.0;
+  double get maxExtent => topPadding + 148.0;
 
   @override
   Widget build(
@@ -314,11 +314,14 @@ class _CategoryResourcesAppBarDelegate
     final delta = maxExtent - minExtent;
     final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
 
-    final collapsedOpacity = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
-    final expandedOpacity = (1.0 - progress * 1.55).clamp(0.0, 1.0);
+    // Fade out search bar & subtitle quickly so they vanish before collapsing
+    final expandedOpacity = (1.0 - progress * 1.8).clamp(0.0, 1.0);
+
+    // Curved bottom corner radius flattens as it collapses
     final cornerRadius = (1.0 - progress) * 32.0;
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -336,42 +339,32 @@ class _CategoryResourcesAppBarDelegate
             : null,
       ),
       child: Stack(
-        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
-          // ── EXPANDED VIEW (Course Title, Category, Search bar) ───
+          // ── EXPANDABLE SUBTITLE & SEARCH BAR ──────────────────
           if (expandedOpacity > 0.0)
             Positioned(
               top: topPadding + 44,
-              left: 20,
-              right: 20,
-              bottom: 18,
+              left: 16,
+              right: 16,
               child: Opacity(
                 opacity: expandedOpacity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      courseTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      categoryLabel,
-                      style: const TextStyle(
-                        color: ResourceUiConstants.accentGold,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    Padding(
+                      padding: const EdgeInsets.only(left: 36),
+                      child: Text(
+                        categoryLabel,
+                        style: const TextStyle(
+                          color: ResourceUiConstants.accentGold,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     SearchPillBar(
                       controller: searchController,
                       focusNode: searchFocusNode,
@@ -382,10 +375,10 @@ class _CategoryResourcesAppBarDelegate
               ),
             ),
 
-          // ── COMPACT TOP APPBAR (Pinned: Back icon + Course & Category) ───
+          // ── PINNED TOP ROW: Back button & Course title on SAME line ──
           Positioned(
             top: topPadding,
-            left: 8,
+            left: 4,
             right: 16,
             height: kToolbarHeight,
             child: Row(
@@ -398,39 +391,20 @@ class _CategoryResourcesAppBarDelegate
                   ),
                   onPressed: onBack,
                 ),
-                const SizedBox(width: 4),
-                if (collapsedOpacity > 0.0)
-                  Expanded(
-                    child: Opacity(
-                      opacity: collapsedOpacity,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            courseTitle,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            categoryLabel,
-                            style: const TextStyle(
-                              color: ResourceUiConstants.accentGold,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Text(
+                    courseTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
               ],
             ),
           ),

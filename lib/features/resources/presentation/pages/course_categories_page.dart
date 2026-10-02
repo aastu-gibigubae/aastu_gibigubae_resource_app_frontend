@@ -143,7 +143,7 @@ class _CourseAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => topPadding + kToolbarHeight;
 
   @override
-  double get maxExtent => topPadding + 145.0;
+  double get maxExtent => topPadding + 92.0;
 
   @override
   Widget build(
@@ -153,12 +153,11 @@ class _CourseAppBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     final delta = maxExtent - minExtent;
     final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
-
-    final collapsedOpacity = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
-    final expandedOpacity = (1.0 - progress * 1.5).clamp(0.0, 1.0);
     final cornerRadius = (1.0 - progress) * 32.0;
+    final badgeOpacity = (1.0 - progress * 2.0).clamp(0.0, 1.0);
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -176,57 +175,11 @@ class _CourseAppBarDelegate extends SliverPersistentHeaderDelegate {
             : null,
       ),
       child: Stack(
-        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
-          // ── EXPANDED VIEW (Course icon badge, name, semester) ────
-          if (expandedOpacity > 0.0)
-            Positioned(
-              top: topPadding + 48,
-              left: 20,
-              right: 20,
-              child: Opacity(
-                opacity: expandedOpacity,
-                child: Row(
-                  children: [
-                    CourseIconBadge(iconKey: course.iconKey, size: 52),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            course.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            course.semester,
-                            style: const TextStyle(
-                              color: ResourceUiConstants.accentGold,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // ── PINNED TOP APPBAR (Back icon + Course Name) ─────────
           Positioned(
             top: topPadding,
-            left: 8,
+            left: 4,
             right: 16,
             height: kToolbarHeight,
             child: Row(
@@ -239,23 +192,48 @@ class _CourseAppBarDelegate extends SliverPersistentHeaderDelegate {
                   ),
                   onPressed: onBack,
                 ),
-                const SizedBox(width: 4),
-                if (collapsedOpacity > 0.0)
-                  Expanded(
-                    child: Opacity(
-                      opacity: collapsedOpacity,
-                      child: Text(
+                const SizedBox(width: 2),
+                if (badgeOpacity > 0.0)
+                  Opacity(
+                    opacity: badgeOpacity,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: CourseIconBadge(iconKey: course.iconKey, size: 38),
+                    ),
+                  ),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         course.name,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                      if (badgeOpacity > 0.0)
+                        Opacity(
+                          opacity: badgeOpacity,
+                          child: Text(
+                            course.semester,
+                            style: const TextStyle(
+                              color: ResourceUiConstants.accentGold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),

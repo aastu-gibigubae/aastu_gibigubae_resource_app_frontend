@@ -493,7 +493,7 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => topPadding + kToolbarHeight;
 
   @override
-  double get maxExtent => topPadding + 215.0;
+  double get maxExtent => topPadding + 148.0;
 
   @override
   Widget build(
@@ -504,16 +504,14 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
     final delta = maxExtent - minExtent;
     final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
 
-    // Collapsed title fades in near the end of the collapse (from 0.5 to 1.0)
-    final collapsedOpacity = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
-
-    // Expanded large elements fade out quickly as soon as scrolling starts (from 0.0 to 0.65)
-    final expandedOpacity = (1.0 - progress * 1.55).clamp(0.0, 1.0);
+    // Fade out search bar & subtitle quickly so they vanish before collapsing
+    final expandedOpacity = (1.0 - progress * 1.8).clamp(0.0, 1.0);
 
     // Curved bottom corner radius flattens as it collapses
     final cornerRadius = (1.0 - progress) * 32.0;
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -531,40 +529,32 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
             : null,
       ),
       child: Stack(
-        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
-          // ── EXPANDED VIEW (Large title, subtitle, search bar) ───
+          // ── EXPANDABLE SUBTITLE & SEARCH BAR ──────────────────
           if (expandedOpacity > 0.0)
             Positioned(
               top: topPadding + 44,
-              left: 20,
-              right: 20,
-              bottom: 18,
+              left: 16,
+              right: 16,
               child: Opacity(
                 opacity: expandedOpacity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Browse',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
+                    const Padding(
+                      padding: EdgeInsets.only(left: 36),
+                      child: Text(
+                        'Find your course resources',
+                        style: TextStyle(
+                          color: Color(0xCCFFFFFF),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Find your course resources',
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(220),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     SearchPillBar(
                       controller: searchController,
                       focusNode: searchFocusNode,
@@ -575,10 +565,10 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
 
-          // ── COMPACT TOP APPBAR (Pinned: Back icon + Browse title) ───
+          // ── PINNED TOP ROW: Back button & Browse title on SAME line ──
           Positioned(
             top: topPadding,
-            left: 8,
+            left: 4,
             right: 16,
             height: kToolbarHeight,
             child: Row(
@@ -591,19 +581,16 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
                   ),
                   onPressed: onBack,
                 ),
-                const SizedBox(width: 4),
-                if (collapsedOpacity > 0.0)
-                  Opacity(
-                    opacity: collapsedOpacity,
-                    child: const Text(
-                      'Browse',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                const SizedBox(width: 2),
+                const Text(
+                  'Browse',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
                   ),
+                ),
               ],
             ),
           ),
@@ -618,3 +605,4 @@ class _BrowseAppBarDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.searchController != searchController;
   }
 }
+

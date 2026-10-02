@@ -164,7 +164,7 @@ class _NotificationsAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => topPadding + kToolbarHeight;
 
   @override
-  double get maxExtent => topPadding + 130.0;
+  double get maxExtent => topPadding + 80.0;
 
   @override
   Widget build(
@@ -174,12 +174,10 @@ class _NotificationsAppBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     final delta = maxExtent - minExtent;
     final progress = (shrinkOffset / (delta <= 0 ? 1 : delta)).clamp(0.0, 1.0);
-
-    final collapsedOpacity = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
-    final expandedOpacity = (1.0 - progress * 1.5).clamp(0.0, 1.0);
     final cornerRadius = (1.0 - progress) * 32.0;
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -197,32 +195,11 @@ class _NotificationsAppBarDelegate extends SliverPersistentHeaderDelegate {
             : null,
       ),
       child: Stack(
-        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
-          // ── EXPANDED LARGE TITLE ───────────────────────────────
-          if (expandedOpacity > 0.0)
-            Positioned(
-              top: topPadding + 52,
-              left: 20,
-              right: 20,
-              child: Opacity(
-                opacity: expandedOpacity,
-                child: const Text(
-                  'Notifications',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-            ),
-
-          // ── PINNED TOP BAR (Back icon + Notifications text) ───
           Positioned(
             top: topPadding,
-            left: 8,
+            left: 4,
             right: 16,
             height: kToolbarHeight,
             child: Row(
@@ -235,19 +212,16 @@ class _NotificationsAppBarDelegate extends SliverPersistentHeaderDelegate {
                   ),
                   onPressed: onBack,
                 ),
-                const SizedBox(width: 4),
-                if (collapsedOpacity > 0.0)
-                  Opacity(
-                    opacity: collapsedOpacity,
-                    child: const Text(
-                      'Notifications',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                const SizedBox(width: 2),
+                const Text(
+                  'Notifications',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
                   ),
+                ),
               ],
             ),
           ),
