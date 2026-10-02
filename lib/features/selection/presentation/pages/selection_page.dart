@@ -281,6 +281,7 @@ class _SelectionPageState extends State<SelectionPage> {
     }
 
     // Navigate to preview / sneak peek screen
+    if (!context.mounted) return;
     context.go(RouteNames.exploreResources);
   }
 }
