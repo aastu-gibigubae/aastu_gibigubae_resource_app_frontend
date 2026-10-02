@@ -7,13 +7,14 @@ import '../../../core/constants/storage_keys.dart';
 /// SPLASH PROVIDER
 ///
 /// Determines where to navigate after the splash screen:
-///   • onboarding  — first launch (onboarding not yet seen)
-///   • login       — returning user without a valid session
-///   • home        — returning premium user (skip selection)
-///   • selection   — returning free user with a valid session
+///   • onboarding       — first launch (onboarding not yet seen)
+///   • login            — returning user without a valid session
+///   • home             — premium user or free user who completed onboarding flow
+///   • selection        — user who hasn't selected year and stream yet
+///   • exploreResources — user who selected year/stream but hasn't seen explore/payment
 /// ================================================================
 
-enum SplashDestination { onboarding, login, home, selection }
+enum SplashDestination { onboarding, login, home, selection, exploreResources }
 
 final splashDestinationProvider =
     FutureProvider<SplashDestination>((ref) async {
@@ -36,13 +37,31 @@ final splashDestinationProvider =
     return SplashDestination.login;
   }
 
-  // ── Check if the user is premium → skip selection ───────────────
+  // ── Check if the user is premium → go to home ───────────────────
   final subscriptionStatus =
       await storage.read(StorageKeys.subscriptionStatus) ?? 'none';
   final isPremium =
       subscriptionStatus == 'active' || subscriptionStatus == 'premium';
 
-  return isPremium
-      ? SplashDestination.home
-      : SplashDestination.selection;
+  if (isPremium) {
+    return SplashDestination.home;
+  }
+
+  // ── Check if user completed year & stream selection ─────────────
+  final selectionCompleted =
+      prefs.getBool(StorageKeys.selectionCompleted) ?? false;
+
+  if (!selectionCompleted) {
+    return SplashDestination.selection;
+  }
+
+  // ── Check if user has seen payment or explore courses screen ─────
+  final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;
+  final paymentSeen = prefs.getBool(StorageKeys.paymentSeen) ?? false;
+
+  if (!exploreSeen && !paymentSeen) {
+    return SplashDestination.exploreResources;
+  }
+
+  return SplashDestination.home;
 });

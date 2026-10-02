@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/storage_keys.dart';
 import '../../core/storage/secure_storage.dart';
@@ -10,15 +11,15 @@ import 'route_names.dart';
 ///
 /// Navigation rules:
 ///   • Unauthenticated → protected route  : redirect to /login
-///   • Authenticated   → /login or /signup : redirect based on plan
-///   • Premium user    → /selection        : redirect to /home
-///   • Free user       → /login or /signup : redirect to /selection
+///   • Authenticated   → /login or /signup : redirect based on user progress
+///   • User completed selection visiting /selection : redirect to explore or home
 /// ================================================================
 
 class RouteGuards {
   final SecureStorage _secureStorage;
+  final SharedPreferences? _prefs;
 
-  const RouteGuards(this._secureStorage);
+  const RouteGuards(this._secureStorage, [this._prefs]);
 
   Future<String?> redirect(BuildContext context, GoRouterState state) async {
     final location = state.matchedLocation;
@@ -45,14 +46,28 @@ class RouteGuards {
       final isPremium =
           subscriptionStatus == 'active' || subscriptionStatus == 'premium';
 
-      // Premium users trying to re-enter login/signup → home.
-      // Free users trying to re-enter login/signup → selection.
-      if (location == RouteNames.login || location == RouteNames.signup) {
-        return isPremium ? RouteNames.home : RouteNames.selection;
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      final selectionCompleted =
+          prefs.getBool(StorageKeys.selectionCompleted) ?? false;
+      final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;
+      final paymentSeen = prefs.getBool(StorageKeys.paymentSeen) ?? false;
+
+      String getPostLoginDestination() {
+        if (isPremium) return RouteNames.home;
+        if (!selectionCompleted) return RouteNames.selection;
+        if (!exploreSeen && !paymentSeen) return RouteNames.exploreResources;
+        return RouteNames.home;
       }
 
-      // Premium users visiting selection → send them to home.
-      if (isPremium && location == RouteNames.selection) {
+      // Premium or returning users trying to re-enter login/signup
+      if (location == RouteNames.login || location == RouteNames.signup) {
+        return getPostLoginDestination();
+      }
+
+      // If user already completed selection and visits /selection
+      if (location == RouteNames.selection && (isPremium || selectionCompleted)) {
+        if (isPremium) return RouteNames.home;
+        if (!exploreSeen && !paymentSeen) return RouteNames.exploreResources;
         return RouteNames.home;
       }
     }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/widgets/branding_widgets.dart';
 import '../../../auth/providers/session_provider.dart';
 import '../../../device/providers/device_status_provider.dart';
@@ -18,6 +20,19 @@ class PaymentReviewPage extends ConsumerStatefulWidget {
 
 class _PaymentReviewPageState extends ConsumerState<PaymentReviewPage> {
   bool _isChecking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _markPaymentSeen();
+  }
+
+  Future<void> _markPaymentSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(StorageKeys.paymentSeen, true);
+    } catch (_) {}
+  }
 
   Future<void> _checkStatus() async {
     if (_isChecking) return;

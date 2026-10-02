@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/providers/app_providers.dart';
 import '../../../../app/router/route_names.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -60,11 +62,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _errorMessage = error;
       });
     } else {
-      // Premium users go straight to home, free users go to selection.
       final user = ref.read(authProvider).valueOrNull;
       final isPremium = user?.isPremium ?? false;
       if (mounted) {
-        context.go(isPremium ? RouteNames.home : RouteNames.selection);
+        if (isPremium) {
+          context.go(RouteNames.home);
+        } else {
+          final prefs = ref.read(sharedPreferencesProvider);
+          final selectionCompleted =
+              prefs.getBool(StorageKeys.selectionCompleted) ?? false;
+          final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;
+          final paymentSeen = prefs.getBool(StorageKeys.paymentSeen) ?? false;
+
+          if (!selectionCompleted) {
+            context.go(RouteNames.selection);
+          } else if (!exploreSeen && !paymentSeen) {
+            context.go(RouteNames.exploreResources);
+          } else {
+            context.go(RouteNames.home);
+          }
+        }
       }
     }
   }

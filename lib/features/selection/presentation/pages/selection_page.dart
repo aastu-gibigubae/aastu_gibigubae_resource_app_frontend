@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/widgets/branding_widgets.dart';
 
 class SelectionPage extends StatefulWidget {
@@ -272,17 +273,26 @@ class _SelectionPageState extends State<SelectionPage> {
     debugPrint('Selected year: $selectedYear');
     debugPrint('Selected field: $selectedField');
 
+    bool hasSeenPreviewOrPayment = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('selected_academic_year', selectedYear);
       await prefs.setString('selected_field', selectedField);
+      await prefs.setBool(StorageKeys.selectionCompleted, true);
+
+      final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;
+      final paymentSeen = prefs.getBool(StorageKeys.paymentSeen) ?? false;
+      hasSeenPreviewOrPayment = exploreSeen || paymentSeen;
     } catch (e) {
       debugPrint('Failed to save selection: $e');
     }
 
-    // Navigate to preview / sneak peek screen
-    if (!context.mounted) return;
-    context.go(RouteNames.exploreResources);
+    if (!mounted) return;
+    if (!hasSeenPreviewOrPayment) {
+      context.go(RouteNames.exploreResources);
+    } else {
+      context.go(RouteNames.home);
+    }
   }
 }
 

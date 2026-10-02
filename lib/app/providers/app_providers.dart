@@ -130,7 +130,10 @@ final refreshSessionUseCaseProvider = Provider<RefreshSessionUseCase>((ref) {
 // ── Router ──────────────────────────────────────────────────────
 
 final routeGuardsProvider = Provider<RouteGuards>((ref) {
-  return RouteGuards(ref.watch(secureStorageProvider));
+  return RouteGuards(
+    ref.watch(secureStorageProvider),
+    ref.watch(sharedPreferencesProvider),
+  );
 });
 
 final routerProvider = Provider((ref) {

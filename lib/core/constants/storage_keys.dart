@@ -17,6 +17,9 @@ class StorageKeys {
 
   // ── SharedPreferences (simple flags) ─────────────────────────────
   static const String onboardingSeen = 'onboarding_seen';
+  static const String selectionCompleted = 'selection_completed';
+  static const String exploreSeen = 'explore_seen';
+  static const String paymentSeen = 'payment_seen';
   static const String lastHeartbeat = 'last_heartbeat_ts';
   static const String lastVerification = 'last_verification_ts';
   static const String subscriptionStatus = 'subscription_status';

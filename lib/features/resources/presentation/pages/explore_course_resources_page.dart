@@ -1,17 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_item.dart';
 
-class ExploreCourseResourcesPage extends ConsumerWidget {
+class ExploreCourseResourcesPage extends ConsumerStatefulWidget {
   const ExploreCourseResourcesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExploreCourseResourcesPage> createState() =>
+      _ExploreCourseResourcesPageState();
+}
+
+class _ExploreCourseResourcesPageState
+    extends ConsumerState<ExploreCourseResourcesPage> {
+  @override
+  void initState() {
+    super.initState();
+    _markExploreSeen();
+  }
+
+  Future<void> _markExploreSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(StorageKeys.exploreSeen, true);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sampleResources = const MockResourceDatasource()
         .getAllResources()
         .where((r) => r.isFreeSample)
