@@ -196,28 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
 
-                  // ── Forgot password ──────────────────────────────
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: GestureDetector(
-                        onTap: () => context.push(RouteNames.forgotPassword),
-                        child: const Text(
-                          'Forgot Password',
-                          style: TextStyle(
-                            color: Color(0xFFD99B14),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Color(0xFFD99B14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
 
                   // ── Remember me ──────────────────────────────────
                   AuthRememberMe(

@@ -14,8 +14,6 @@ class RouteNames {
   // ── Auth ──────────────────────────────────────────────────────
   static const String login = '/login';
   static const String signup = '/signup';
-  static const String forgotPassword = '/forgot-password';
-  static const String resetPassword = '/reset-password';
 
   // ── Main shell (4 bottom-nav tabs) ────────────────────────────
   static const String selection = '/selection';

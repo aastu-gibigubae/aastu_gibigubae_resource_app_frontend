@@ -17,8 +17,6 @@ class ApiConstants {
   static const String signup = '/auth/signup';
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';
-  static const String forgotPassword = '/auth/forgot-password';
-  static const String resetPassword = '/auth/reset-password';
 
   // ── Device / Verification ─────────────────────────────────────────
   /// SRS Module 5 — FR-5.3 / FR-5.4

@@ -31,9 +31,7 @@ class RouteGuards {
     final isPublic = location == RouteNames.splash ||
         location == RouteNames.onboarding ||
         location == RouteNames.login ||
-        location == RouteNames.signup ||
-        location == RouteNames.forgotPassword ||
-        location == RouteNames.resetPassword;
+        location == RouteNames.signup;
 
     // Unauthenticated users hit protected routes → send to login.
     if (!isLoggedIn && !isPublic) {
