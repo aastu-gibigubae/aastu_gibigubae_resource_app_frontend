@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/errors/error_mapper.dart';
+import '../../../../core/widgets/full_screen_loading_overlay.dart';
 import '../../../auth/providers/auth_provider.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -17,6 +19,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   String _userDept = 'Not selected';
   String _userYear = 'Not selected';
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
@@ -42,7 +45,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     } catch (_) {}
   }
 
-  Future<void> _logout(BuildContext context) async {
+  Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -68,10 +71,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
     );
 
-    if (confirm == true && context.mounted) {
-      await ref.read(authProvider.notifier).logout();
-      if (context.mounted) {
-        context.go(RouteNames.login);
+    if (confirm == true && mounted) {
+      setState(() => _isLoggingOut = true);
+      try {
+        await ref.read(authProvider.notifier).logout();
+        if (mounted) {
+          context.go(RouteNames.login);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoggingOut = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                ErrorMapper.userMessage(
+                  e,
+                  defaultMessage: 'Logout failed. Please try again.',
+                ),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -94,55 +115,57 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Top Navy Curved Header matching image copy 20.png
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + 12,
-                  24,
-                  54,
-                ),
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(28),
+      body: Stack(
+        children: [
+          SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Top Navy Curved Header matching image copy 20.png
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      MediaQuery.of(context).padding.top + 12,
+                      24,
+                      54,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(28),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          onPressed: () {
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go(RouteNames.home);
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 2),
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go(RouteNames.home);
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
               // Overlapping Avatar and Card Structure
               Transform.translate(
@@ -266,7 +289,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         width: double.infinity,
                         height: 52,
                         child: OutlinedButton.icon(
-                          onPressed: () => _logout(context),
+                          onPressed: _isLoggingOut ? null : _logout,
                           icon: const Icon(
                             Icons.logout_rounded,
                             color: Color(0xFFDC2626),
@@ -302,8 +325,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ),
       ),
-    );
-  }
+      if (_isLoggingOut)
+        const FullScreenLoadingOverlay(
+          title: 'Logging out...',
+          subtitle: 'Please wait a moment',
+        ),
+    ],
+  ),
+);
+}
 
   Widget _buildProfileDetailRow({
     required IconData icon,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/full_screen_loading_overlay.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/device/providers/device_status_provider.dart';
 import '../router/route_names.dart';
@@ -83,16 +84,16 @@ class MainShell extends ConsumerWidget {
       // While loading or on error, show the shell normally —
       // do not block the user on transient network issues.
       loading: () => shell,
-      error: (_, _s) => shell,
+      error: (_, _) => shell,
     );
   }
 }
 
 // ── Device Mismatch Gate ──────────────────────────────────────────
 
-class _DeviceMismatchGate extends StatelessWidget {
+class _DeviceMismatchGate extends StatefulWidget {
   final DeviceStatusData deviceData;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const _DeviceMismatchGate({
     required this.deviceData,
@@ -100,10 +101,28 @@ class _DeviceMismatchGate extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isMismatch = deviceData.status == DeviceStatusState.mismatch;
+  State<_DeviceMismatchGate> createState() => _DeviceMismatchGateState();
+}
 
-    return Scaffold(
+class _DeviceMismatchGateState extends State<_DeviceMismatchGate> {
+  bool _isLoggingOut = false;
+
+  Future<void> _handleLogout() async {
+    setState(() => _isLoggingOut = true);
+    try {
+      await widget.onLogout();
+    } catch (_) {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMismatch = widget.deviceData.status == DeviceStatusState.mismatch;
+
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Center(
@@ -152,7 +171,7 @@ class _DeviceMismatchGate extends StatelessWidget {
                           'Premium access is tied to a single device. Please '
                           'log in from your registered device, or contact support '
                           'to transfer your subscription.'
-                      : deviceData.message,
+                      : widget.deviceData.message,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,
@@ -168,7 +187,7 @@ class _DeviceMismatchGate extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: onLogout,
+                    onPressed: _isLoggingOut ? null : _handleLogout,
                     icon: const Icon(Icons.logout_rounded),
                     label: const Text(
                       'Log Out',
@@ -204,7 +223,14 @@ class _DeviceMismatchGate extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+    if (_isLoggingOut)
+      const FullScreenLoadingOverlay(
+        title: 'Logging out...',
+        subtitle: 'Please wait a moment',
+      ),
+  ],
+);
   }
 }
 

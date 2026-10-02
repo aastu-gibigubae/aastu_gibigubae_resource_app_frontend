@@ -134,6 +134,8 @@ class AuthNotifier extends AsyncNotifier<User?> {
   // ── Logout ─────────────────────────────────────────────────────
 
   Future<void> logout() async {
+    state = const AsyncValue.loading();
+
     if (kMockAuth) {
       await ref.read(secureStorageProvider).deleteAll();
       state = const AsyncValue.data(null);
