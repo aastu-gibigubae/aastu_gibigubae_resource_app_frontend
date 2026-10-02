@@ -19,6 +19,7 @@ import '../../features/resources/presentation/pages/category_resources_page.dart
 import '../../features/resources/presentation/pages/course_categories_page.dart';
 import '../../features/resources/presentation/pages/explore_course_resources_page.dart';
 import '../../features/resources/presentation/pages/home_page.dart';
+import '../../features/resources/presentation/pages/pdf_viewer_page.dart';
 import '../../features/resources/presentation/pages/resource_detail_page.dart';
 import '../../features/selection/presentation/pages/selection_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
@@ -206,6 +207,21 @@ GoRouter createRouter({
           final resId = (state.extra is int) ? state.extra as int : 0;
           return MaterialPage(
             child: ResourceDetailPage(resourceId: resId),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.pdfViewer,
+        name: RouteNames.pdfViewer,
+        pageBuilder: (context, state) {
+          if (state.extra is ResourceItem) {
+            return MaterialPage(
+              child: PdfViewerPage(resource: state.extra as ResourceItem),
+            );
+          }
+          return const MaterialPage(
+            child: PdfViewerPage(),
           );
         },
       ),

@@ -497,7 +497,6 @@ class MockResourceDatasource {
         ];
 
       case ResourceCategoryType.handouts:
-      default:
         return [
           ResourceItem(
             id: (courseId * 100) + 1,
@@ -602,5 +601,15 @@ class MockResourceDatasource {
       semester: 'Semester 1',
       academicYear: 1,
     );
+  }
+
+  List<ResourceItem> getAllResources() {
+    final list = <ResourceItem>[];
+    for (final course in freshmanCourses) {
+      for (final cat in ResourceCategoryType.values) {
+        list.addAll(getCategoryResources(courseId: course.id, category: cat));
+      }
+    }
+    return list;
   }
 }

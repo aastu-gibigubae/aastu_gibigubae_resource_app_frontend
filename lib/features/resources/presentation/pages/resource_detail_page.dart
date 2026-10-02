@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/category_icons.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../../data/datasources/mock_resource_datasource.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
-import '../constants/resource_ui_constants.dart';
-import '../widgets/resource_document_hero.dart';
+import '../widgets/download_success_dialog.dart';
 
 class ResourceDetailPage extends ConsumerWidget {
   final ResourceItem? resource;
@@ -22,27 +21,15 @@ class ResourceDetailPage extends ConsumerWidget {
     this.resourceId = 0,
   });
 
-  Future<void> _openInBrowser(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open file.')),
-      );
+  Future<void> _handleDownload(BuildContext context, ResourceItem res) async {
+    if (res.fileUrl != null && res.fileUrl!.isNotEmpty) {
+      final uri = Uri.parse(res.fileUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     }
-  }
-
-  Future<void> _downloadFile(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not start download.')),
-      );
+    if (context.mounted) {
+      await showDownloadSuccessDialog(context);
     }
   }
 
@@ -52,6 +39,7 @@ class ResourceDetailPage extends ConsumerWidget {
         (resourceId > 0
             ? const MockResourceDatasource().getResourceById(resourceId)
             : null);
+
     if (res == null) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -66,301 +54,393 @@ class ResourceDetailPage extends ConsumerWidget {
       );
     }
 
+    final courseTitle = res.courseName.isNotEmpty
+        ? res.courseName
+        : 'Communicative English I';
+    final fileSizeStr = res.fileSizeBytes > 0
+        ? '${(res.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+        : '2.4 MB';
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CurvedHeader(
-              showBackButton: true,
-              title: res.title,
-              heroGraphic: const ResourceDocumentHero(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Resource Metadata Tile
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const PdfIconBadge(size: 52),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          res.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: ResourceUiConstants.textNavy,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Navy Curved Header matching image copy 16.png
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 12,
+                  24,
+                  26,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(28),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go(RouteNames.browse);
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            courseTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          res.courseName.isNotEmpty
-                              ? res.courseName
-                              : 'Course Resource',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        if (!res.locked && res.fileSizeBytes > 0) ...[
                           const SizedBox(height: 3),
                           Text(
-                            res.formattedSize,
+                            res.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF6B7280),
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Locked Warning Banner (if resource is locked)
-            if (res.locked) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B).withAlpha(80),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lock_outline_rounded,
-                        color: Color(0xFFD97706),
-                        size: 28,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              res.reasonCode != null
-                                  ? _reasonLabel(res.reasonCode!)
-                                  : 'Access Restricted',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF92400E),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              res.message?.isNotEmpty == true
-                                  ? res.message!
-                                  : 'This resource requires an active subscription and verified device.',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFFB45309),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 28),
+
+              // Title Section with PDF Badge matching image copy 16.png
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: ResourceUiConstants.primaryButtonHeight,
-                  child: ElevatedButton.icon(
-                    onPressed: () => context.push(RouteNames.premium),
-                    icon: const Icon(Icons.star_rounded, color: Colors.white),
-                    label: const Text(
-                      'Upgrade to Premium Access',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
-                        color: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const PdfIconBadge(size: 52),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            res.title,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            courseTitle,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
 
-            // Document Preview Container
-            if (!res.locked) ...[
+              const SizedBox(height: 24),
+
+              // Document Specifications Card matching image copy 16.png
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
                   width: double.infinity,
-                  height: 200,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFFE5E7EB),
-                      width: 1.2,
+                      color: const Color(0xFFE2E8F0),
+                      width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withAlpha(6),
                         blurRadius: 10,
-                        offset: const Offset(0, 2),
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 48,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Document Preview',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          res.formattedSize,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: Column(
+                    children: [
+                      _buildSpecRow(
+                        icon: Icons.description_outlined,
+                        label: 'File type',
+                        value: 'Pdf Document',
+                      ),
+                      const SizedBox(height: 18),
+                      _buildSpecRow(
+                        icon: Icons.description_outlined,
+                        label: 'File size',
+                        value: fileSizeStr,
+                      ),
+                      const SizedBox(height: 18),
+                      _buildSpecRow(
+                        icon: Icons.description_outlined,
+                        label: 'Pages',
+                        value: '40 Pages',
+                      ),
+                    ],
                   ),
                 ),
               ),
 
               const SizedBox(height: 28),
 
-              // Action Buttons — use file_url from backend
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    // Open/Read — opens the backend file_url in browser
-                    SizedBox(
-                      width: double.infinity,
-                      height: ResourceUiConstants.primaryButtonHeight,
-                      child: ElevatedButton(
-                        onPressed: res.fileUrl != null
-                            ? () => _openInBrowser(context, res.fileUrl!)
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          ResourceUiConstants.openRead,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
+              // Locked Warning Banner (if resource is locked)
+              if (res.locked) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B).withAlpha(80),
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // Download PDF — launches file_url for download
-                    SizedBox(
-                      width: double.infinity,
-                      height: ResourceUiConstants.primaryButtonHeight,
-                      child: ElevatedButton.icon(
-                        onPressed: res.fileUrl != null
-                            ? () => _downloadFile(context, res.fileUrl!)
-                            : null,
-                        icon: const Icon(
-                          Icons.file_download_outlined,
-                          color: Colors.white,
-                          size: 22,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.lock_outline_rounded,
+                          color: Color(0xFFD97706),
+                          size: 28,
                         ),
-                        label: const Text(
-                          ResourceUiConstants.downloadPdf,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                            color: Colors.white,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                res.reasonCode != null
+                                    ? _reasonLabel(res.reasonCode!)
+                                    : 'Access Restricted',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                res.message?.isNotEmpty == true
+                                    ? res.message!
+                                    : 'This resource requires an active subscription and verified device.',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push(RouteNames.premium),
+                      icon: const Icon(Icons.star_rounded, color: Colors.white),
+                      label: const Text(
+                        'Upgrade to Premium Access',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ] else ...[
+                // Action Buttons matching image copy 16.png
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      // Open/Read button (Navy Blue)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              RouteNames.pdfViewer,
+                              extra: res,
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.visibility_outlined,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          label: const Text(
+                            'Open/Read',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
 
-            const SizedBox(height: 20),
+                      const SizedBox(height: 14),
 
-            // Report Problem Link
-            Center(
-              child: TextButton.icon(
-                onPressed: () => _showReportDialog(context, ref, res.id),
-                icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.grey),
-                label: const Text(
-                  'Report a problem with this resource',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey,
-                    decoration: TextDecoration.underline,
+                      // Download PDF button (Gold/Amber)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _handleDownload(context, res),
+                          icon: const Icon(
+                            Icons.download_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          label: const Text(
+                            'Download PDF',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
+              // Report problem link
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _showReportDialog(context, ref, res.id),
+                  icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.grey),
+                  label: const Text(
+                    'Report a problem with this resource',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSpecRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 22,
+          color: const Color(0xFF1E3A8A),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF64748B),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -407,19 +487,35 @@ class ResourceDetailPage extends ConsumerWidget {
                       style: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const SizedBox(height: 12),
-                    ...reasons.map((r) => RadioListTile<String>(
-                          value: r.$1,
-                          groupValue: selectedReason,
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(r.$2,
-                              style: const TextStyle(fontSize: 14)),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => selectedReason = val);
-                            }
-                          },
-                        )),
+                    ...reasons.map((r) {
+                      final isSelected = selectedReason == r.$1;
+                      return InkWell(
+                        onTap: () => setState(() => selectedReason = r.$1),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  r.$2,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                     if (selectedReason == 'other') ...[
                       const SizedBox(height: 8),
                       TextField(
