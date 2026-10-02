@@ -51,6 +51,12 @@ dependencies:
   # Crypto for checksum
   crypto: ^3.0.6
 
+  # PDF rendering (native Android PDFium / iOS WKWebView)
+  flutter_pdfview: ^1.3.2
+
+  # HTTP file caching for PDF streaming
+  flutter_cache_manager: ^3.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

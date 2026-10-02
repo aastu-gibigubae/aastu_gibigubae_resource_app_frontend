@@ -1,12 +1,27 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/resource_item.dart';
 import '../../providers/resource_providers.dart';
 import '../widgets/download_success_dialog.dart';
+
+/// ================================================================
+/// PDF VIEWER PAGE
+///
+/// Renders a real PDF using flutter_pdfview (native PDFium on Android,
+/// WKWebView on iOS). Supports two sources:
+///   1. Local file path (already downloaded to app sandbox)
+///   2. Remote URL  → streamed via flutter_cache_manager, then rendered
+///
+/// The "Save to app" download button saves the file into the sandbox
+/// via ResourceDownloadService (no external file access).
+/// ================================================================
 
 class PdfViewerPage extends ConsumerStatefulWidget {
   final ResourceItem? resource;
@@ -27,44 +42,103 @@ class PdfViewerPage extends ConsumerStatefulWidget {
 }
 
 class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
-  int _currentPage = 1;
-  final int _totalPages = 40;
-  final TransformationController _transformController =
-      TransformationController();
-  double _zoomLevel = 1.0;
+  // ── PDF state ──────────────────────────────────────────────────
+  String? _localPath;       // path to the resolved PDF file
+  bool _isReady = false;    // true once PDFView is ready to render
+  bool _isLoading = true;   // true while resolving path
+  String? _loadError;       // non-null if resolution/render failed
+
+  // ── Page tracking ──────────────────────────────────────────────
+  int _currentPage = 0;
+  int _totalPages = 0;
+  PDFViewController? _pdfController;
+
+  // ── Download state ─────────────────────────────────────────────
   bool _isDownloading = false;
+  double _downloadProgress = 0;
 
-  void _zoomIn() {
-    setState(() {
-      _zoomLevel = (_zoomLevel + 0.25).clamp(0.8, 3.0);
-      _transformController.value =
-          Matrix4.diagonal3Values(_zoomLevel, _zoomLevel, 1.0);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _resolveSource();
   }
 
-  void _zoomOut() {
-    setState(() {
-      _zoomLevel = (_zoomLevel - 0.25).clamp(0.8, 3.0);
-      _transformController.value =
-          Matrix4.diagonal3Values(_zoomLevel, _zoomLevel, 1.0);
-    });
+  // ── Source resolution ──────────────────────────────────────────
+
+  /// Resolves the PDF to a local file path:
+  ///   1. If already downloaded in sandbox → use that.
+  ///   2. If remote URL → cache/stream with flutter_cache_manager.
+  Future<void> _resolveSource() async {
+    final res = widget.resource;
+
+    // Check sandbox first
+    if (res != null) {
+      final service = ref.read(resourceDownloadServiceProvider);
+      final localPath = await service.getLocalFilePath(res.id);
+      if (localPath != null && await File(localPath).exists()) {
+        if (mounted) {
+          setState(() {
+            _localPath = localPath;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+    }
+
+    // Use remote URL
+    final url = res?.fileUrl ?? widget.fileUrl;
+    if (url == null || url.isEmpty || !url.startsWith('http')) {
+      if (mounted) {
+        setState(() {
+          _loadError = 'No PDF source available for this resource.';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      // flutter_cache_manager downloads + caches the file.
+      // The cached file is in the app's private cache dir (not public storage).
+      final file = await DefaultCacheManager().getSingleFile(url);
+      if (mounted) {
+        setState(() {
+          _localPath = file.path;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadError = 'Failed to load PDF: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
   }
 
-  void _resetZoom() {
-    setState(() {
-      _zoomLevel = 1.0;
-      _transformController.value = Matrix4.identity();
-    });
-  }
+  // ── In-app download (sandbox save) ────────────────────────────
 
   Future<void> _downloadToApp() async {
     final res = widget.resource;
     if (res == null) return;
 
-    setState(() => _isDownloading = true);
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+    });
+
     try {
       final service = ref.read(resourceDownloadServiceProvider);
-      await service.downloadResource(res);
+      await service.downloadResource(
+        res,
+        onProgress: (received, total) {
+          if (total > 0 && mounted) {
+            setState(() => _downloadProgress = received / total);
+          }
+        },
+      );
       ref.invalidate(isResourceDownloadedProvider(res.id));
       if (mounted) {
         await showDownloadSuccessDialog(context);
@@ -72,426 +146,416 @@ class _PdfViewerPageState extends ConsumerState<PdfViewerPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to download: $e')),
+          SnackBar(content: Text('Download failed: $e')),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isDownloading = false);
+        setState(() {
+          _isDownloading = false;
+          _downloadProgress = 0;
+        });
       }
     }
   }
 
-  Future<void> _openExternal(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open external viewer.')),
-        );
-      }
-    }
+  // ── Navigation helpers ─────────────────────────────────────────
+
+  Future<void> _goToPage(int page) async {
+    await _pdfController?.setPage(page);
   }
+
+  // ── Build ──────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final res = widget.resource;
     final effectiveTitle = res?.title ?? widget.title;
     final effectiveCourseName =
-        res?.courseName.isNotEmpty == true ? res!.courseName : widget.courseName;
-    final effectiveFileUrl = res?.fileUrl ?? widget.fileUrl;
+        (res?.courseName.isNotEmpty == true) ? res!.courseName : widget.courseName;
 
     final isDownloaded = res != null
         ? (ref.watch(isResourceDownloadedProvider(res.id)).valueOrNull ?? false)
         : false;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFF1A1A2E),
       body: SafeArea(
         top: false,
         child: Column(
           children: [
-            // Top Navy Curved Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                MediaQuery.of(context).padding.top + 10,
-                16,
-                20,
-              ),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(28),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        onPressed: () {
-                          if (context.canPop()) {
-                            context.pop();
-                          } else {
-                            context.go('/home');
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              effectiveCourseName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              effectiveTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Download to app button if not yet downloaded
-                      if (!isDownloaded && res != null)
-                        _isDownloading
-                            ? const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              )
-                            : IconButton(
-                                icon: const Icon(
-                                  Icons.download_rounded,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                                tooltip: 'Save to in-app storage',
-                                onPressed: _downloadToApp,
-                              ),
-                      // External viewer button
-                      if (effectiveFileUrl != null &&
-                          effectiveFileUrl.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(
-                            Icons.open_in_new_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          tooltip: 'Open in system app',
-                          onPressed: () => _openExternal(effectiveFileUrl),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  // Storage mode pill (In-App Offline vs Online Stream)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 48),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDownloaded
-                            ? const Color(0xFF16A34A).withAlpha(50)
-                            : Colors.white.withAlpha(30),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDownloaded
-                              ? const Color(0xFF22C55E)
-                              : Colors.white30,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isDownloaded
-                                ? Icons.offline_pin_rounded
-                                : Icons.cloud_outlined,
-                            size: 14,
-                            color: isDownloaded
-                                ? const Color(0xFF4ADE80)
-                                : Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isDownloaded
-                                ? 'In-App Storage (Offline Access)'
-                                : 'Online Reader Mode',
-                            style: TextStyle(
-                              color: isDownloaded
-                                  ? const Color(0xFF4ADE80)
-                                  : Colors.white,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // ── Header ──────────────────────────────────────────
+            _buildHeader(
+              context,
+              effectiveTitle: effectiveTitle,
+              effectiveCourseName: effectiveCourseName,
+              isDownloaded: isDownloaded,
+              res: res,
             ),
 
-            // In-app Reader Controls Toolbar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              color: Colors.white,
-              child: Row(
-                children: [
-                  // Page controller
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 26),
-                    tooltip: 'Previous page',
-                    onPressed: _currentPage > 1
-                        ? () => setState(() => _currentPage--)
-                        : null,
-                  ),
-                  Text(
-                    'Page $_currentPage / $_totalPages',
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right_rounded, size: 26),
-                    tooltip: 'Next page',
-                    onPressed: _currentPage < _totalPages
-                        ? () => setState(() => _currentPage++)
-                        : null,
-                  ),
-                  const Spacer(),
-                  // Zoom Out
-                  IconButton(
-                    icon: const Icon(Icons.zoom_out_rounded, size: 22),
-                    tooltip: 'Zoom out',
-                    onPressed: _zoomOut,
-                  ),
-                  // Zoom Reset
-                  InkWell(
-                    onTap: _resetZoom,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 4),
-                      child: Text(
-                        '${(_zoomLevel * 100).toInt()}%',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF475569),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Zoom In
-                  IconButton(
-                    icon: const Icon(Icons.zoom_in_rounded, size: 22),
-                    tooltip: 'Zoom in',
-                    onPressed: _zoomIn,
-                  ),
-                ],
-              ),
-            ),
+            // ── Toolbar ─────────────────────────────────────────
+            if (_localPath != null && _isReady)
+              _buildToolbar(),
 
-            const Divider(height: 1, color: Color(0xFFE2E8F0)),
-
-            // In-App Document Canvas matching image copy 17.png with Interactive Viewer
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: InteractiveViewer(
-                  transformationController: _transformController,
-                  minScale: 0.8,
-                  maxScale: 3.5,
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(8),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // Document Content Representation
-                        Positioned.fill(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(28, 36, 36, 40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Page Header
-                                Container(
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  decoration: const BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: Color(0xFFF1F5F9),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        effectiveCourseName,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF94A3B8),
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      Text(
-                                        'P. $_currentPage',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF94A3B8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                // Document Title in page
-                                Text(
-                                  '$effectiveTitle — Part $_currentPage',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 28),
-
-                                // Reading Layout Simulation matching UI design image copy 17.png
-                                _buildDocLine(width: 90, height: 16),
-                                const SizedBox(height: 20),
-                                _buildDocLine(width: 150, height: 16),
-                                const SizedBox(height: 20),
-                                _buildDocLine(width: 200, height: 16),
-                                const SizedBox(height: 20),
-                                _buildDocLine(width: 260, height: 16),
-                                const SizedBox(height: 20),
-                                _buildDocLine(width: 280, height: 16),
-                                const SizedBox(height: 20),
-                                _buildDocLine(width: 300, height: 16),
-
-                                const SizedBox(height: 36),
-
-                                // Paragraph body lines
-                                _buildDocLine(width: 280, height: 14),
-                                const SizedBox(height: 16),
-                                _buildDocLine(width: 290, height: 14),
-                                const SizedBox(height: 16),
-                                _buildDocLine(width: 240, height: 14),
-                                const SizedBox(height: 16),
-                                _buildDocLine(width: 270, height: 14),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // Right scroll indicator bar matching image copy 17.png
-                        Positioned(
-                          top: 24,
-                          right: 14,
-                          bottom: 24,
-                          child: Container(
-                            width: 14,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              child: Container(
-                                margin: const EdgeInsets.all(2),
-                                width: 10,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFCBD5E1),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // ── PDF Body ────────────────────────────────────────
+            Expanded(child: _buildBody()),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDocLine({required double width, required double height}) {
+  // ── Header ────────────────────────────────────────────────────
+
+  Widget _buildHeader(
+    BuildContext context, {
+    required String effectiveTitle,
+    required String effectiveCourseName,
+    required bool isDownloaded,
+    required ResourceItem? res,
+  }) {
     return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
-        borderRadius: BorderRadius.circular(height / 2),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        8,
+        MediaQuery.of(context).padding.top + 6,
+        8,
+        14,
       ),
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/home'),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      effectiveCourseName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      effectiveTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Download button
+              if (res != null && !isDownloaded)
+                _isDownloading
+                    ? Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(
+                              value: _downloadProgress > 0 ? _downloadProgress : null,
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                          if (_downloadProgress > 0)
+                            Text(
+                              '${(_downloadProgress * 100).toInt()}%',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      )
+                    : IconButton(
+                        icon: const Icon(
+                          Icons.download_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        tooltip: 'Save to in-app storage',
+                        onPressed: _downloadToApp,
+                      ),
+
+              // Saved indicator
+              if (isDownloaded)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.offline_pin_rounded,
+                      color: Color(0xFF4ADE80), size: 22),
+                ),
+            ],
+          ),
+
+          // Storage mode pill
+          Padding(
+            padding: const EdgeInsets.only(left: 44, top: 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDownloaded
+                      ? const Color(0xFF16A34A).withAlpha(60)
+                      : Colors.white.withAlpha(25),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDownloaded
+                        ? const Color(0xFF22C55E)
+                        : Colors.white30,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isDownloaded
+                          ? Icons.offline_pin_outlined
+                          : Icons.cloud_outlined,
+                      size: 13,
+                      color: isDownloaded
+                          ? const Color(0xFF4ADE80)
+                          : Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      isDownloaded
+                          ? 'In-App Offline'
+                          : 'Online Streaming',
+                      style: TextStyle(
+                        color: isDownloaded
+                            ? const Color(0xFF4ADE80)
+                            : Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Toolbar ───────────────────────────────────────────────────
+
+  Widget _buildToolbar() {
+    return Container(
+      height: 48,
+      color: const Color(0xFF0F172A),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          // Prev page
+          IconButton(
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.chevron_left_rounded, color: Colors.white70, size: 28),
+            onPressed: _currentPage > 0
+                ? () => _goToPage(_currentPage - 1)
+                : null,
+          ),
+
+          // Page indicator
+          Expanded(
+            child: Center(
+              child: Text(
+                _totalPages > 0
+                    ? 'Page ${_currentPage + 1} of $_totalPages'
+                    : 'Loading...',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+
+          // Next page
+          IconButton(
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 28),
+            onPressed: (_totalPages > 0 && _currentPage < _totalPages - 1)
+                ? () => _goToPage(_currentPage + 1)
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Body ──────────────────────────────────────────────────────
+
+  Widget _buildBody() {
+    // Loading state
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text(
+              'Loading PDF...',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Error state
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.picture_as_pdf_outlined,
+                  size: 64, color: Colors.white30),
+              const SizedBox(height: 20),
+              const Text(
+                'Could Not Load PDF',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _loadError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isLoading = true;
+                    _loadError = null;
+                    _localPath = null;
+                  });
+                  _resolveSource();
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // No path resolved
+    if (_localPath == null) {
+      return const Center(
+        child: Text(
+          'No PDF available.',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
+    // Real PDF rendering
+    return Stack(
+      children: [
+        PDFView(
+          filePath: _localPath!,
+          enableSwipe: true,
+          swipeHorizontal: false,
+          autoSpacing: true,
+          pageFling: true,
+          pageSnap: true,
+          fitPolicy: FitPolicy.BOTH,
+          onRender: (pages) {
+            if (mounted) {
+              setState(() {
+                _totalPages = pages ?? 0;
+                _isReady = true;
+              });
+            }
+          },
+          onViewCreated: (controller) {
+            _pdfController = controller;
+          },
+          onPageChanged: (page, total) {
+            if (mounted) {
+              setState(() {
+                _currentPage = page ?? 0;
+                _totalPages = total ?? _totalPages;
+              });
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _loadError = 'PDF render error: $error';
+              });
+            }
+          },
+          onPageError: (page, error) {
+            debugPrint('[PdfViewerPage] page $page error: $error');
+          },
+        ),
+
+        // Initial render overlay
+        if (!_isReady)
+          const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Colors.white),
+                SizedBox(height: 16),
+                Text(
+                  'Rendering PDF...',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
