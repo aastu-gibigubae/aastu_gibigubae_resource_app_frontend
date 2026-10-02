@@ -9,43 +9,59 @@ import '../../../auth/providers/session_provider.dart';
 import '../../../device/providers/device_status_provider.dart';
 import '../widgets/payment_widgets.dart';
 
-class PaymentReviewPage extends ConsumerWidget {
+class PaymentReviewPage extends ConsumerStatefulWidget {
   const PaymentReviewPage({super.key});
 
-  Future<void> _checkStatus(BuildContext context, WidgetRef ref) async {
-    // First, call the heartbeat endpoint to fetch the latest
-    // subscription_status from the server and persist it to SecureStorage.
-    try {
-      await ref.read(deviceStatusProvider.notifier).refresh();
-    } catch (_) {
-      // Heartbeat may fail (offline, etc.) — continue with cached data.
-    }
+  @override
+  ConsumerState<PaymentReviewPage> createState() => _PaymentReviewPageState();
+}
 
-    // Now isPremiumProvider reads the freshly updated SecureStorage.
-    final isPremium = await ref.refresh(isPremiumProvider.future);
-    if (!context.mounted) return;
-    if (isPremium) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🎉 Your payment has been approved! Premium is active.'),
-          backgroundColor: Color(0xFF10B981),
-        ),
-      );
-      context.go(RouteNames.home);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '⏳ Payment verification is still pending. Our admin will approve it shortly.',
+class _PaymentReviewPageState extends ConsumerState<PaymentReviewPage> {
+  bool _isChecking = false;
+
+  Future<void> _checkStatus() async {
+    if (_isChecking) return;
+    setState(() => _isChecking = true);
+
+    try {
+      // First, call the heartbeat endpoint to fetch the latest
+      // subscription_status from the server and persist it to SecureStorage.
+      try {
+        await ref.read(deviceStatusProvider.notifier).refresh();
+      } catch (_) {
+        // Heartbeat may fail (offline, etc.) — continue with cached data.
+      }
+
+      // Now isPremiumProvider reads the freshly updated SecureStorage.
+      final isPremium = await ref.refresh(isPremiumProvider.future);
+      if (!mounted) return;
+      if (isPremium) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Your payment has been approved! Premium is active.'),
+            backgroundColor: Color(0xFF10B981),
           ),
-          backgroundColor: Color(0xFFD97706),
-        ),
-      );
+        );
+        context.go(RouteNames.home);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '⏳ Payment verification is still pending. Our admin will approve it shortly.',
+            ),
+            backgroundColor: Color(0xFFD97706),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isChecking = false);
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -99,7 +115,8 @@ class PaymentReviewPage extends ConsumerWidget {
                 const SizedBox(height: 18),
 
                 PaymentStatusCard(
-                  onCheckStatus: () => _checkStatus(context, ref),
+                  isLoading: _isChecking,
+                  onCheckStatus: _isChecking ? null : _checkStatus,
                 ),
               ],
             ),

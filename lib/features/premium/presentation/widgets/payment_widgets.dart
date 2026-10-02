@@ -66,11 +66,13 @@ class PaymentHeader extends StatelessWidget {
 class PaymentPrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   const PaymentPrimaryButton({
     super.key,
     required this.text,
     this.onPressed,
+    this.isLoading = false,
   });
 
   @override
@@ -79,22 +81,47 @@ class PaymentPrimaryButton extends StatelessWidget {
       width: double.infinity,
       height: 42,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.primary.withAlpha(180),
+          disabledForegroundColor: Colors.white70,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
         ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: isLoading
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Checking...',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }
@@ -542,10 +569,12 @@ class PaymentReviewSteps extends StatelessWidget {
 
 class PaymentStatusCard extends StatelessWidget {
   final VoidCallback? onCheckStatus;
+  final bool isLoading;
 
   const PaymentStatusCard({
     super.key,
     this.onCheckStatus,
+    this.isLoading = false,
   });
 
   @override
@@ -652,6 +681,7 @@ class PaymentStatusCard extends StatelessWidget {
           const SizedBox(height: 14),
           PaymentPrimaryButton(
             text: 'Check Status  ⟳',
+            isLoading: isLoading,
             onPressed: onCheckStatus,
           ),
         ],
