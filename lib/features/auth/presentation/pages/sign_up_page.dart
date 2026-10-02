@@ -111,20 +111,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Top space ────────────────────────────────────────
-              const SizedBox(height: 285),
+              const SizedBox(height: 12),
 
               // ── Title ────────────────────────────────────────────
               const Text(
                 'Sign Up',
                 style: TextStyle(
                   color: AuthColors.primary,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w400,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
 
               // ── Subtitle ─────────────────────────────────────────
               const Text(
@@ -132,7 +132,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 style: TextStyle(
                   color: AuthColors.primary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
 
@@ -199,7 +199,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               AuthTextField(
                 controller: _nameController,
                 hint: 'Name:',
-                icon: Icons.person,
+                icon: Icons.person_outline,
                 textInputAction: TextInputAction.next,
               ),
 
@@ -209,7 +209,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               AuthTextField(
                 controller: _emailController,
                 hint: 'Email:',
-                icon: Icons.email,
+                icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),
@@ -220,7 +220,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               AuthTextField(
                 controller: _passwordController,
                 hint: 'Password:',
-                icon: Icons.lock,
+                icon: Icons.lock_outline,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.next,
                 suffixIcon: AuthPasswordButton(
@@ -235,13 +235,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               // ── Phone ─────────────────────────────────────────────
               AuthTextField(
                 controller: _phoneController,
-                hint: 'Phone Number (e.g. +251912345678):',
-                icon: Icons.phone,
+                hint: 'Phone Number:',
+                icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,
               ),
 
-              const SizedBox(height: 42),
+              const SizedBox(height: 20),
 
               AuthRememberMe(
                 value: _rememberMe,
@@ -255,32 +255,29 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 },
               ),
 
-              const SizedBox(height: 44),
+              const SizedBox(height: 36),
 
               // ── Sign up button ────────────────────────────────────
               Center(
-                child: SizedBox(
-                  width: 376,
-                  child: _isLoading
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Connecting to server (waking up)…',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
+                child: _isLoading
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Connecting to server (waking up)…',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
                             ),
-                          ],
-                        )
-                      : AuthButton(
-                          text: 'Sign Up',
-                          onPressed: _signUp,
-                        ),
-                ),
+                          ),
+                        ],
+                      )
+                    : AuthButton(
+                        text: 'Sign Up',
+                        onPressed: _signUp,
+                      ),
               ),
 
               const SizedBox(height: 20),
@@ -293,8 +290,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     'Already have an account? Log In',
                     style: TextStyle(
                       color: Color(0xFFD99B14),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       decoration: TextDecoration.underline,
                       decorationColor: Color(0xFFD99B14),
                     ),
@@ -302,7 +299,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ),
               ),
 
-              const SizedBox(height: 100),
+              const SizedBox(height: 60),
             ],
           ),
         ),

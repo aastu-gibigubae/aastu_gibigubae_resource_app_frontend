@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AuthColors {
-  static const Color primary = Color(0xFF0B2D6B);
-  static const Color field = Color(0xFFECECEC);
-  static const Color fieldBorder = Color(0xFFC7C7C7);
+  static const Color primary = Color(0xFF0B254E);
+  static const Color field = Color(0xFFEBECEF);
+  static const Color fieldBorder = Color(0xFFD1D5DB);
   static const Color hint = Color(0xFF8195B6);
-  static const Color icon = Color(0xFFA9B8CF);
-  static const Color outline = Color(0xFFB7B7B7);
+  static const Color icon = Color(0xFF8195B6);
+  static const Color outline = Color(0xFFE2E8F0);
+  static const Color text = Color(0xFF0F172A);
 }
 
 /// ===============================================================
@@ -25,30 +26,16 @@ class AuthBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // Background NEVER moves when keyboard opens.
-      resizeToAvoidBottomInset: false,
-
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
-
           /// WHITE BACKGROUND
           const ColoredBox(
             color: Colors.white,
           ),
 
-          /// NAVY TOP CURVE
-          const Positioned.fill(
-            child: ClipPath(
-              clipper: AuthTopCurveClipper(),
-              child: ColoredBox(
-                color: AuthColors.primary,
-              ),
-            ),
-          ),
-
-          /// BOTTOM RIGHT OUTLINE
+          /// BOTTOM RIGHT OUTLINE (matches Figma image copy 2 and 3)
           Positioned(
             right: -285,
             bottom: -215,
@@ -67,10 +54,8 @@ class AuthBackground extends StatelessWidget {
             ),
           ),
 
-          /// CONTENT
-          SafeArea(
-            child: child,
-          ),
+          /// SCROLLABLE CONTENT (contains AuthTopCurve at top so text never scrolls over it)
+          child,
         ],
       ),
     );
@@ -82,37 +67,34 @@ class AuthBackground extends StatelessWidget {
 /// ===============================================================
 
 class AuthTopCurveClipper extends CustomClipper<Path> {
-  const AuthTopCurveClipper();
+  final double topPadding;
+
+  const AuthTopCurveClipper({this.topPadding = 0});
 
   @override
   Path getClip(Size size) {
     final path = Path();
 
     path.moveTo(0, 0);
-
     path.lineTo(size.width, 0);
-
-    path.lineTo(
-      size.width,
-      285,
-    );
+    path.lineTo(size.width, 240 + topPadding);
 
     path.cubicTo(
       size.width * 0.70,
-      255,
+      210 + topPadding,
       size.width * 0.45,
-      205,
+      165 + topPadding,
       size.width * 0.28,
-      190,
+      150 + topPadding,
     );
 
     path.cubicTo(
       size.width * 0.18,
-      181,
+      142 + topPadding,
       size.width * 0.08,
-      185,
+      146 + topPadding,
       0,
-      295,
+      250 + topPadding,
     );
 
     path.close();
@@ -121,10 +103,28 @@ class AuthTopCurveClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(
-    covariant CustomClipper<Path> oldClipper,
-  ) {
-    return false;
+  bool shouldReclip(covariant AuthTopCurveClipper oldClipper) =>
+      oldClipper.topPadding != topPadding;
+}
+
+class AuthTopCurve extends StatelessWidget {
+  const AuthTopCurve({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    final totalHeight = 255.0 + topPadding;
+
+    return SizedBox(
+      height: totalHeight,
+      width: double.infinity,
+      child: ClipPath(
+        clipper: AuthTopCurveClipper(topPadding: topPadding),
+        child: const ColoredBox(
+          color: AuthColors.primary,
+        ),
+      ),
+    );
   }
 }
 
@@ -142,24 +142,16 @@ class AuthScrollView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
-
-          padding: const EdgeInsets.only(
-            bottom: 40,
-          ),
-
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight,
-            ),
-            child: child,
-          ),
-        );
-      },
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AuthTopCurve(),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -194,65 +186,48 @@ class AuthTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 40,
-
+      height: 52,
       decoration: BoxDecoration(
         color: AuthColors.field,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AuthColors.fieldBorder,
-          width: 2,
+          width: 1.2,
         ),
       ),
-
       child: TextField(
         controller: controller,
-
         obscureText: obscureText,
-
         keyboardType: keyboardType,
-
         textInputAction: textInputAction,
-
         textAlignVertical: TextAlignVertical.center,
-
         style: const TextStyle(
-          color: AuthColors.hint,
-          fontSize: 10,
-          fontWeight: FontWeight.w100,
+          color: AuthColors.text,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
         ),
-
         decoration: InputDecoration(
           border: InputBorder.none,
-
           isDense: true,
-
           hintText: hint,
-
           hintStyle: const TextStyle(
             color: AuthColors.hint,
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
-
           prefixIcon: Icon(
             icon,
             color: AuthColors.icon,
-            size: 20,
+            size: 22,
           ),
-
-          prefixIconConstraints:
-              const BoxConstraints(
-            minWidth: 42,
-            minHeight: 60,
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 46,
+            minHeight: 52,
           ),
-
           suffixIcon: suffixIcon,
-
-          contentPadding:
-              const EdgeInsets.symmetric(
-            vertical: 0,
-            horizontal: 8,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 12,
           ),
         ),
       ),
@@ -278,27 +253,22 @@ class AuthPasswordButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onPressed,
-
       padding: EdgeInsets.zero,
-
       constraints: const BoxConstraints(
-        minWidth: 45,
-        minHeight: 50,
+        minWidth: 46,
+        minHeight: 52,
       ),
-
       icon: Icon(
-        obscure
-            ? Icons.visibility_off
-            : Icons.visibility,
-        color: const Color(0xFFA8A8A8),
-        size: 20,
+        obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+        color: AuthColors.icon,
+        size: 22,
       ),
     );
   }
 }
 
 /// ===============================================================
-/// REMEMBER ME
+/// REMEMBER ME (Matches Figma Toggle Switch)
 /// ===============================================================
 
 class AuthRememberMe extends StatelessWidget {
@@ -313,69 +283,51 @@ class AuthRememberMe extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
-
-      children: [
-
-        Flexible(
-          child: const Text(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!value),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
             'Remember me',
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AuthColors.primary,
               fontSize: 15,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-
-        GestureDetector(
-          onTap: () {
-            onChanged(!value);
-          },
-
-          child: Container(
-            width: 38,
-            height: 22,
-
-            padding:
-                const EdgeInsets.all(3),
-
+          Container(
+            width: 44,
+            height: 24,
+            padding: const EdgeInsets.all(2.5),
             decoration: BoxDecoration(
-              color: value
-                  ? AuthColors.primary
-                  : const Color(0xFFD0D0D0),
-
-              borderRadius:
-                  BorderRadius.circular(20),
+              color: value ? AuthColors.primary : const Color(0xFFCBD5E1),
+              borderRadius: BorderRadius.circular(12),
             ),
-
             child: AnimatedAlign(
-              duration:
-                  const Duration(
-                milliseconds: 180,
-              ),
-
-              alignment: value
-                  ? Alignment.centerRight
-                  : Alignment.centerLeft,
-
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeInOut,
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
-                width: 21,
-                height: 21,
-
-                decoration:
-                    const BoxDecoration(
+                width: 19,
+                height: 19,
+                decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(30),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -397,35 +349,24 @@ class AuthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 180,
-      height: 34,
-
+      width: 185,
+      height: 48,
       child: ElevatedButton(
         onPressed: onPressed,
-
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              AuthColors.primary,
-
+          backgroundColor: AuthColors.primary,
           foregroundColor: Colors.white,
-
           elevation: 0,
-
           padding: EdgeInsets.zero,
-
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
-
         child: Text(
           text,
-
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 24,
+            fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
         ),

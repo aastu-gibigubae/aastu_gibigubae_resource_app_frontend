@@ -115,165 +115,149 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return AuthBackground(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            keyboardDismissBehavior:
-                ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.only(
-              left: 30,
-              right: 30,
-              top: 0,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 30,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 280),
+      child: AuthScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
 
-                  // ── Title ────────────────────────────────────────
-                  const Text(
-                    'Log In',
-                    style: TextStyle(
-                      color: AuthColors.primary,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w400,
-                      height: 0.95,
-                    ),
+              // ── Title ────────────────────────────────────────
+              const Text(
+                'Log In',
+                style: TextStyle(
+                  color: AuthColors.primary,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // ── Subtitle ─────────────────────────────────────
+              const Text(
+                'Please log in to continue',
+                style: TextStyle(
+                  color: AuthColors.primary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Error message ────────────────────────────────
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
-
-                  const SizedBox(height: 14),
-
-                  // ── Subtitle ─────────────────────────────────────
-                  const Text(
-                    'Please log in to continue',
-                    style: TextStyle(
-                      color: AuthColors.primary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── Error message ────────────────────────────────
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.error_outline,
+                            color: Color(0xFFDC2626), size: 18),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 2),
-                            child: Icon(Icons.error_outline,
-                                color: Color(0xFFDC2626), size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Color(0xFFB91C1C),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                color: Color(0xFFB91C1C),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // ── Email ────────────────────────────────────────
-                  Center(
-                    child: AuthTextField(
-                      controller: _emailController,
-                      hint: 'Email:',
-                      icon: Icons.email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Password ─────────────────────────────────────
-                  Center(
-                    child: AuthTextField(
-                      controller: _passwordController,
-                      hint: 'Password:',
-                      icon: Icons.lock,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      suffixIcon: AuthPasswordButton(
-                        obscure: _obscurePassword,
-                        onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Remember me ──────────────────────────────────
-                  AuthRememberMe(
-                    value: _rememberMe,
-                    onChanged: (v) {
-                      setState(() => _rememberMe = v);
-                      final prefs = ref.read(sharedPreferencesProvider);
-                      prefs.setBool(StorageKeys.rememberMe, v);
-                      if (!v) {
-                        prefs.remove(StorageKeys.savedEmail);
-                      }
-                    },
-                  ),
-
-                  const SizedBox(height: 44),
-
-                  // ── Login button ─────────────────────────────────
-                  Center(
-                    child: _isLoading
-                        ? const CircularProgressIndicator()
-                        : AuthButton(
-                            text: 'Log In',
-                            onPressed: _login,
-                          ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Sign up link ─────────────────────────────────
-                  Center(
-                    child: GestureDetector(
-                      onTap: () => context.go(RouteNames.signup),
-                      child: const Text(
-                        "Don't have an account? Sign Up",
-                        style: TextStyle(
-                          color: Color(0xFFD99B14),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.underline,
-                          decorationColor: Color(0xFFD99B14),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── Email ────────────────────────────────────────
+              AuthTextField(
+                controller: _emailController,
+                hint: 'Email:',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Password ─────────────────────────────────────
+              AuthTextField(
+                controller: _passwordController,
+                hint: 'Password:',
+                icon: Icons.lock_outline,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                suffixIcon: AuthPasswordButton(
+                  obscure: _obscurePassword,
+                  onPressed: () => setState(
+                      () => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Remember me ──────────────────────────────────
+              AuthRememberMe(
+                value: _rememberMe,
+                onChanged: (v) {
+                  setState(() => _rememberMe = v);
+                  final prefs = ref.read(sharedPreferencesProvider);
+                  prefs.setBool(StorageKeys.rememberMe, v);
+                  if (!v) {
+                    prefs.remove(StorageKeys.savedEmail);
+                  }
+                },
+              ),
+
+              const SizedBox(height: 36),
+
+              // ── Login button ─────────────────────────────────
+              Center(
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : AuthButton(
+                        text: 'Log In',
+                        onPressed: _login,
+                      ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Sign up link ─────────────────────────────────
+              Center(
+                child: GestureDetector(
+                  onTap: () => context.go(RouteNames.signup),
+                  child: const Text(
+                    "Don't have an account? Sign Up",
+                    style: TextStyle(
+                      color: Color(0xFFD99B14),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFFD99B14),
                     ),
                   ),
-
-                  const SizedBox(height: 90),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+
+              const SizedBox(height: 60),
+            ],
+          ),
+        ),
       ),
     );
   }
