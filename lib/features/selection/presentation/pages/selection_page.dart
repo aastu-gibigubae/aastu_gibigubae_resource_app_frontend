@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,16 +7,17 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/widgets/branding_widgets.dart';
+import '../../../resources/providers/resource_providers.dart';
 
-class SelectionPage extends StatefulWidget {
+class SelectionPage extends ConsumerStatefulWidget {
   const SelectionPage({super.key});
 
   @override
-  State<SelectionPage> createState() => _SelectionPageState();
+  ConsumerState<SelectionPage> createState() => _SelectionPageState();
 }
 
-class _SelectionPageState extends State<SelectionPage> {
-  int selectedYear = 3;
+class _SelectionPageState extends ConsumerState<SelectionPage> {
+  int selectedYear = 1;
 
   String selectedField = 'Applied Science';
 
@@ -273,11 +275,18 @@ class _SelectionPageState extends State<SelectionPage> {
     debugPrint('Selected year: $selectedYear');
     debugPrint('Selected field: $selectedField');
 
+    final streamId = selectedField.toLowerCase().contains('eng') ? 1 : 2;
+
+    // Sync with app-wide filter providers so browsing reflects this selection
+    ref.read(selectedYearFilterProvider.notifier).state = selectedYear;
+    ref.read(selectedStreamFilterProvider.notifier).state = streamId;
+
     bool hasSeenPreviewOrPayment = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('selected_academic_year', selectedYear);
       await prefs.setString('selected_field', selectedField);
+      await prefs.setInt('selected_stream_id', streamId);
       await prefs.setBool(StorageKeys.selectionCompleted, true);
 
       final exploreSeen = prefs.getBool(StorageKeys.exploreSeen) ?? false;

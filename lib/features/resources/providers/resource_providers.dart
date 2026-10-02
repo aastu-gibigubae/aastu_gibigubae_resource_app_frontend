@@ -92,11 +92,11 @@ String _resolveCourseIconKey(String name) {
   return 'book';
 }
 
-// Courses provider with optional filters (Freshman = Year 1)
+// Courses provider with optional filters (Defaults to Year 1)
 class CoursesParams {
   final int? streamId;
   final int? departmentId;
-  final int year;
+  final int? year;
   final int page;
 
   const CoursesParams({
@@ -149,11 +149,16 @@ final coursesProvider = AutoDisposeFutureProvider.family<
     debugPrint('[coursesProvider] Remote fetch failed ($e), using fallback.');
   }
 
-  // Graceful fallback for freshman courses when backend database is not yet seeded
-  var fallbackCourses = MockResourceDatasource.freshmanCourses;
-  if (params.year != 0) {
+  // Graceful fallback when backend database is not yet seeded or offline
+  var fallbackCourses = MockResourceDatasource.allCourses;
+  if (params.year != null && params.year != 0) {
     fallbackCourses = fallbackCourses
         .where((c) => c.academicYear == params.year)
+        .toList();
+  }
+  if (params.streamId != null) {
+    fallbackCourses = fallbackCourses
+        .where((c) => c.streamId == null || c.streamId == params.streamId)
         .toList();
   }
   return (

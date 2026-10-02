@@ -51,63 +51,109 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
     });
     ref.read(searchQueryProvider.notifier).state = '';
     ref.read(selectedStreamFilterProvider.notifier).state = null;
+    ref.read(selectedYearFilterProvider.notifier).state = 1;
   }
 
-  Widget _buildStreamChips(
-    List<StreamItem> streams,
-    int? selectedStream,
-  ) {
-    if (streams.isEmpty) return const SizedBox.shrink();
+  Widget _buildFilterChips({
+    required List<StreamItem> streams,
+    required int? selectedStream,
+    required int selectedYear,
+  }) {
+    const years = [1, 2, 3, 4, 5];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ChoiceChip(
-            label: const Text('All Freshman'),
-            selected: selectedStream == null,
-            onSelected: (selected) {
-              if (selected) {
-                ref.read(selectedStreamFilterProvider.notifier).state = null;
-              }
-            },
-            selectedColor: AppColors.primary,
-            labelStyle: TextStyle(
-              color: selectedStream == null ? Colors.white : const Color(0xFF374151),
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-            backgroundColor: const Color(0xFFF3F4F6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+          // ── Academic Year Filter ──────────────────────────────
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                for (final y in years) ...[
+                  ChoiceChip(
+                    label: Text(y == 1 ? 'Year 1 (Freshman)' : 'Year $y'),
+                    selected: selectedYear == y,
+                    onSelected: (selected) {
+                      if (selected) {
+                        ref.read(selectedYearFilterProvider.notifier).state = y;
+                      }
+                    },
+                    selectedColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: selectedYear == y ? Colors.white : const Color(0xFF374151),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    backgroundColor: const Color(0xFFF3F4F6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          ...streams.map((stream) {
-            final isSelected = selectedStream == stream.id;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(stream.name),
-                selected: isSelected,
-                onSelected: (selected) {
-                  ref.read(selectedStreamFilterProvider.notifier).state =
-                      selected ? stream.id : null;
-                },
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF374151),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-                backgroundColor: const Color(0xFFF3F4F6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+          const SizedBox(height: 6),
+
+          // ── Stream / Field of Study Filter ────────────────────
+          if (streams.isNotEmpty)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('All Streams'),
+                    selected: selectedStream == null,
+                    onSelected: (selected) {
+                      if (selected) {
+                        ref.read(selectedStreamFilterProvider.notifier).state = null;
+                      }
+                    },
+                    selectedColor: const Color(0xFF2563EB),
+                    labelStyle: TextStyle(
+                      color: selectedStream == null ? Colors.white : const Color(0xFF374151),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    backgroundColor: const Color(0xFFF3F4F6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ...streams.map((stream) {
+                    final isSelected = selectedStream == stream.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(stream.name),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          ref.read(selectedStreamFilterProvider.notifier).state =
+                              selected ? stream.id : null;
+                        },
+                        selectedColor: const Color(0xFF2563EB),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFF374151),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                        backgroundColor: const Color(0xFFF3F4F6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               ),
-            );
-          }),
+            ),
         ],
       ),
     );
@@ -182,11 +228,12 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
   @override
   Widget build(BuildContext context) {
     final selectedStream = ref.watch(selectedStreamFilterProvider);
+    final selectedYear = ref.watch(selectedYearFilterProvider) ?? 1;
     final streams = ref.watch(streamsProvider).valueOrNull ?? [];
 
     final coursesParams = CoursesParams(
       streamId: selectedStream,
-      year: 1, // Strictly Year 1 for Freshman
+      year: selectedYear,
     );
     final coursesAsync = ref.watch(coursesProvider(coursesParams));
     final searchResultsAsync = _localFilter.isNotEmpty
@@ -214,8 +261,12 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
               ),
             ),
 
-            // Stream Filter Chips (Freshman Streams only: Engineering / Applied Science)
-            _buildStreamChips(streams, selectedStream),
+            // Year and Stream Filter Chips
+            _buildFilterChips(
+              streams: streams,
+              selectedStream: selectedStream,
+              selectedYear: selectedYear,
+            ),
 
             // Courses and Results List
             Expanded(
@@ -234,6 +285,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                       searchResults.where((r) => r.isResource).toList();
 
                   final hasFilters = selectedStream != null ||
+                      selectedYear != 1 ||
                       _localFilter.isNotEmpty;
 
                   if (courses.isEmpty && resourceResults.isEmpty) {
@@ -271,6 +323,21 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                     );
                   }
 
+                  String sectionTitle;
+                  if (selectedYear == 1) {
+                    sectionTitle = selectedStream != null
+                        ? '${streams.where((s) => s.id == selectedStream).firstOrNull?.name ?? "Freshman"} Freshman Courses'
+                        : ResourceUiConstants.freshmanCourses;
+                  } else {
+                    final streamName = streams
+                        .where((s) => s.id == selectedStream)
+                        .firstOrNull
+                        ?.name;
+                    sectionTitle = streamName != null
+                        ? 'Year $selectedYear $streamName Courses'
+                        : 'Year $selectedYear Courses';
+                  }
+
                   return SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 16),
@@ -281,9 +348,7 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              selectedStream != null
-                                  ? '${streams.where((s) => s.id == selectedStream).firstOrNull?.name ?? "Freshman"} Courses'
-                                  : ResourceUiConstants.freshmanCourses,
+                              sectionTitle,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -312,7 +377,8 @@ class _BrowseCoursesPageState extends ConsumerState<BrowseCoursesPage> {
                           final course = entry.value;
                           final isHighlighted = index == 0 &&
                               _localFilter.isEmpty &&
-                              selectedStream == null;
+                              selectedStream == null &&
+                              selectedYear == 1;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: CourseCard(

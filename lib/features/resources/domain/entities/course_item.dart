@@ -6,6 +6,7 @@ class CourseItem {
   final String iconKey;
   final int resourceCount;
   final String? semesterLabel;
+  final int? streamId;
 
   const CourseItem({
     required this.id,
@@ -15,6 +16,7 @@ class CourseItem {
     this.iconKey = 'book',
     this.resourceCount = 16,
     this.semesterLabel,
+    this.streamId,
   });
 
   factory CourseItem.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class CourseItem {
       iconKey: json['icon_key'] as String? ?? 'book',
       resourceCount: json['resource_count'] as int? ?? 16,
       semesterLabel: json['semester_label'] as String?,
+      streamId: json['stream_id'] as int?,
     );
   }
 

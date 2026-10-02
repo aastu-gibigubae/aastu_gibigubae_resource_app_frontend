@@ -23,7 +23,8 @@ class MockResourceDatasource {
     ),
   ];
 
-  static const List<CourseItem> freshmanCourses = [
+  static const List<CourseItem> allCourses = [
+    // ── Year 1 (General Freshman Courses) ───────────────────────────
     CourseItem(
       id: 1,
       departmentId: 1,
@@ -37,6 +38,7 @@ class MockResourceDatasource {
       name: 'Engineering Mathematics I',
       academicYear: 1,
       iconKey: 'math',
+      streamId: 1,
     ),
     CourseItem(
       id: 3,
@@ -59,7 +61,130 @@ class MockResourceDatasource {
       academicYear: 1,
       iconKey: 'psychology',
     ),
+
+    // ── Year 2 ───────────────────────────────────────────────────────
+    CourseItem(
+      id: 201,
+      departmentId: 1,
+      name: 'Data Structures & Algorithms',
+      academicYear: 2,
+      iconKey: 'logic',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 202,
+      departmentId: 1,
+      name: 'Digital Logic Design',
+      academicYear: 2,
+      iconKey: 'logic',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 203,
+      departmentId: 2,
+      name: 'Applied Calculus II',
+      academicYear: 2,
+      iconKey: 'math',
+      streamId: 2,
+    ),
+    CourseItem(
+      id: 204,
+      departmentId: 2,
+      name: 'Linear Algebra',
+      academicYear: 2,
+      iconKey: 'math',
+      streamId: 2,
+    ),
+
+    // ── Year 3 ───────────────────────────────────────────────────────
+    CourseItem(
+      id: 301,
+      departmentId: 1,
+      name: 'Operating Systems',
+      academicYear: 3,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 302,
+      departmentId: 1,
+      name: 'Database Systems',
+      academicYear: 3,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 303,
+      departmentId: 2,
+      name: 'Applied Statistics',
+      academicYear: 3,
+      iconKey: 'math',
+      streamId: 2,
+    ),
+    CourseItem(
+      id: 304,
+      departmentId: 2,
+      name: 'Numerical Analysis',
+      academicYear: 3,
+      iconKey: 'math',
+      streamId: 2,
+    ),
+
+    // ── Year 4 ───────────────────────────────────────────────────────
+    CourseItem(
+      id: 401,
+      departmentId: 1,
+      name: 'Software Engineering',
+      academicYear: 4,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 402,
+      departmentId: 1,
+      name: 'Computer Networks',
+      academicYear: 4,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 403,
+      departmentId: 2,
+      name: 'Applied Differential Equations',
+      academicYear: 4,
+      iconKey: 'math',
+      streamId: 2,
+    ),
+
+    // ── Year 5 ───────────────────────────────────────────────────────
+    CourseItem(
+      id: 501,
+      departmentId: 1,
+      name: 'Distributed Systems',
+      academicYear: 5,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 502,
+      departmentId: 1,
+      name: 'Capstone Project I',
+      academicYear: 5,
+      iconKey: 'book',
+      streamId: 1,
+    ),
+    CourseItem(
+      id: 503,
+      departmentId: 2,
+      name: 'Research Methods & Analysis',
+      academicYear: 5,
+      iconKey: 'book',
+      streamId: 2,
+    ),
   ];
+
+  static List<CourseItem> get freshmanCourses =>
+      allCourses.where((c) => c.academicYear == 1).toList();
 
   static const List<RecentActivityItem> recentActivities = [
     RecentActivityItem(
@@ -578,9 +703,9 @@ class MockResourceDatasource {
   }
 
   CourseItem getCourseById(int courseId) {
-    return freshmanCourses.firstWhere(
+    return allCourses.firstWhere(
       (c) => c.id == courseId,
-      orElse: () => freshmanCourses.first,
+      orElse: () => allCourses.first,
     );
   }
 
@@ -605,7 +730,7 @@ class MockResourceDatasource {
 
   List<ResourceItem> getAllResources() {
     final list = <ResourceItem>[];
-    for (final course in freshmanCourses) {
+    for (final course in allCourses) {
       for (final cat in ResourceCategoryType.values) {
         list.addAll(getCategoryResources(courseId: course.id, category: cat));
       }
