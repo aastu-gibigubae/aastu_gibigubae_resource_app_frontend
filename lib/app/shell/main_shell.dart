@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/device/providers/device_status_provider.dart';
+import '../router/route_names.dart';
 import '../theme/app_colors.dart';
 
 /// ================================================================
@@ -8,9 +13,13 @@ import '../theme/app_colors.dart';
 /// Persistent scaffold that wraps all bottom-nav tab screens.
 /// [StatefulNavigationShell] from go_router keeps each branch's
 /// page stack alive when you switch tabs.
+///
+/// Device gate: if the heartbeat returns device_mismatch or revoked,
+/// a full-screen overlay blocks all content and forces the user to
+/// either use their registered device or log out.
 /// ================================================================
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainShell({
@@ -34,14 +43,166 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final deviceAsync = ref.watch(deviceStatusProvider);
+
+    final shell = Scaffold(
       backgroundColor: Colors.white,
       body: navigationShell,
       bottomNavigationBar: _BottomBar(
         currentIndex: navigationShell.currentIndex,
         tabs: _tabs,
         onTap: _onTap,
+      ),
+    );
+
+    // Check for blocking device states once the status has loaded.
+    return deviceAsync.when(
+      data: (deviceData) {
+        final isBlocked = deviceData.status == DeviceStatusState.mismatch ||
+            deviceData.status == DeviceStatusState.revoked;
+
+        if (!isBlocked) return shell;
+
+        // Full-screen blocking gate — overlaid on top of the shell so
+        // the user cannot access any tab content.
+        return Stack(
+          children: [
+            // Blur the shell underneath.
+            IgnorePointer(child: Opacity(opacity: 0.15, child: shell)),
+            _DeviceMismatchGate(
+              deviceData: deviceData,
+              onLogout: () async {
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) context.go(RouteNames.login);
+              },
+            ),
+          ],
+        );
+      },
+      // While loading or on error, show the shell normally —
+      // do not block the user on transient network issues.
+      loading: () => shell,
+      error: (_, _s) => shell,
+    );
+  }
+}
+
+// ── Device Mismatch Gate ──────────────────────────────────────────
+
+class _DeviceMismatchGate extends StatelessWidget {
+  final DeviceStatusData deviceData;
+  final VoidCallback onLogout;
+
+  const _DeviceMismatchGate({
+    required this.deviceData,
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMismatch = deviceData.status == DeviceStatusState.mismatch;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFCA5A5), width: 2),
+                  ),
+                  child: Icon(
+                    isMismatch
+                        ? Icons.devices_other_rounded
+                        : Icons.block_rounded,
+                    size: 48,
+                    color: const Color(0xFFDC2626),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // Title
+                Text(
+                  isMismatch ? 'Wrong Device' : 'Access Revoked',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Body
+                Text(
+                  isMismatch
+                      ? 'This account is registered on a different device.\n\n'
+                          'Premium access is tied to a single device. Please '
+                          'log in from your registered device, or contact support '
+                          'to transfer your subscription.'
+                      : deviceData.message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+
+                const SizedBox(height: 36),
+
+                // Log out button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: onLogout,
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Support hint
+                const Text(
+                  'Need help? Contact support@aastugibigubae.com',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
